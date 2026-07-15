@@ -1,0 +1,4 @@
+﻿ID,Nguồn,Năm,Loại nguồn,Vấn đề,Structured requirements,Ambiguity detection,Traceability,DOM/accessibility grounding,Oracle validation,Human approval,Constrained repair,Playwright support,Evaluation,Hạn chế,Mức độ liên quan,Người đọc,Trạng thái
+SRC-001,Playwright Test Agents — official documentation,2025/2026,Official documentation,"Planner, generator và healer cho Playwright testing",,,,,,,,Có,,,Cao,,Chưa đọc chi tiết
+SRC-002,Requirements-Based Test Generation: A Comprehensive Survey — arXiv:2505.02015,2025,Survey,Tổng quan phương pháp sinh kiểm thử dựa trên yêu cầu,,,,,,,,,,,Cao,,Chưa đọc chi tiết
+SRC-003,WebTestPilot — arXiv:2602.11724,2026,Research paper,Agentic E2E testing từ đặc tả ngôn ngữ tự nhiên và GUI,,,,,,,,,,,Cao,,Chưa đọc chi tiết

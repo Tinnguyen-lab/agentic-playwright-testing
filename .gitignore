@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Virtual environment
+.venv/
+venv/
+
+# Environment variables
+.env
+.env.*
+
+# Keep example configuration
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# Playwright artifacts
+test-results/
+playwright-report/
+blob-report/
+
+# Runtime artifacts
+artifacts/logs/*
+artifacts/screenshots/*
+artifacts/traces/*
+artifacts/reports/*
+
+# Local credentials and databases
+*.bak
+*.mdf
+*.ldf
+
+# OS
+.DS_Store
+Thumbs.db

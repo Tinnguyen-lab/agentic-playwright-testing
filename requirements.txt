@@ -1,0 +1,12 @@
+playwright
+pytest
+streamlit
+sqlalchemy
+alembic
+pyodbc
+pydantic
+python-dotenv
+python-docx
+pymupdf
+openai
+jinja2
