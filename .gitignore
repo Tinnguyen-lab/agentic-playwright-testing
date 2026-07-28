@@ -29,6 +29,9 @@ artifacts/screenshots/*
 artifacts/traces/*
 artifacts/reports/*
 
+# CLI demo output
+result.json
+
 # Local credentials and databases
 *.bak
 *.mdf
