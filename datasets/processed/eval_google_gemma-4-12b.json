@@ -1,0 +1,68 @@
+{
+  "model": "google/gemma-4-12b",
+  "n_cases": 5,
+  "n_gold_reqs": 15,
+  "n_pred_reqs": 15,
+  "count_mismatches": 0,
+  "clean_reqs": 5,
+  "overflag_clean": 2,
+  "by_type": {
+    "conflict": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "missing_actor": {
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "missing_expected_outcome": {
+      "tp": 3,
+      "fp": 2,
+      "fn": 0,
+      "precision": 0.6,
+      "recall": 1.0,
+      "f1": 0.75
+    },
+    "missing_precondition": {
+      "tp": 1,
+      "fp": 6,
+      "fn": 0,
+      "precision": 0.143,
+      "recall": 1.0,
+      "f1": 0.25
+    },
+    "underspecified_action": {
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1": 0.667
+    },
+    "vague_quantifier": {
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    }
+  },
+  "micro": {
+    "tp": 12,
+    "fp": 9,
+    "fn": 0,
+    "precision": 0.571,
+    "recall": 1.0,
+    "f1": 0.727
+  },
+  "macro_f1": 0.778
+}

@@ -1,0 +1,68 @@
+{
+  "model": "gemma-4-12b (trước: chưa nắn prompt)",
+  "n_cases": 5,
+  "n_gold_reqs": 15,
+  "n_pred_reqs": 15,
+  "count_mismatches": 0,
+  "clean_reqs": 5,
+  "overflag_clean": 0,
+  "by_type": {
+    "conflict": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "missing_actor": {
+      "tp": 0,
+      "fp": 3,
+      "fn": 3,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "missing_expected_outcome": {
+      "tp": 0,
+      "fp": 3,
+      "fn": 3,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "missing_precondition": {
+      "tp": 0,
+      "fp": 4,
+      "fn": 1,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "underspecified_action": {
+      "tp": 0,
+      "fp": 2,
+      "fn": 1,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "vague_quantifier": {
+      "tp": 0,
+      "fp": 3,
+      "fn": 3,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    }
+  },
+  "micro": {
+    "tp": 1,
+    "fp": 15,
+    "fn": 11,
+    "precision": 0.062,
+    "recall": 0.083,
+    "f1": 0.071
+  },
+  "macro_f1": 0.167
+}

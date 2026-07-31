@@ -29,6 +29,8 @@ QUY TẮC BẮT BUỘC:
   * conflict: mâu thuẫn giữa các yêu cầu (đưa vào global_ambiguities).
   * other: loại khác.
 - Mỗi ambiguity phải có description (lý do) và source_excerpt (trích đoạn liên quan).
+- Gắn MỖI ambiguity vào đúng requirement chứa nó (trường "ambiguities" của requirement đó).
+  CHỈ mâu thuẫn giữa NHIỀU yêu cầu (conflict) mới đưa vào "global_ambiguities".
 
 Trả về JSON gồm: requirements[] và global_ambiguities[]. KHÔNG gán ID (hệ thống tự gán).\
 """
@@ -40,7 +42,6 @@ class RequirementAnalysisAgent:
         self._model_name = model_name
 
     def analyze(self, document_text: str, source_name: str) -> RequirementAnalysisResult:
-        # Fail-safe: tài liệu rỗng -> không gọi LLM, trả kết quả rỗng.
         if not document_text or not document_text.strip():
             return self._empty_result(source_name)
 
@@ -49,7 +50,6 @@ class RequirementAnalysisAgent:
             SYSTEM_PROMPT, user_prompt, RequirementExtraction
         )
 
-        # Gán ID tuần tự (traceable, tất định) — bỏ qua ID do LLM tự đặt.
         for index, requirement in enumerate(extraction.requirements, start=1):
             requirement.id = f"REQ-{index:03d}"
 

@@ -22,6 +22,7 @@ from src.models.requirement import (
     Severity,
     StructuredRequirement,
 )
+from src.services.document_loader import load_document
 from src.services.llm_client import MockLLMClient, OpenAILLMClient
 from src.utils.config import load_settings
 
@@ -110,7 +111,7 @@ def _print_summary(result: RequirementAnalysisResult, *, mock: bool) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     try:
-        sys.stdout.reconfigure(encoding="utf-8")  # in tiếng Việt an toàn trên Windows
+        sys.stdout.reconfigure(encoding="utf-8")
     except Exception:
         pass
 
@@ -120,24 +121,34 @@ def main(argv: list[str] | None = None) -> int:
     src.add_argument("--text", help="Nội dung yêu cầu dán trực tiếp")
     parser.add_argument("--mock", action="store_true", help="Dùng LLM giả lập (offline)")
     parser.add_argument("--out", default="result.json", help="File JSON đầu ra")
+    parser.add_argument("--profile", help="Hồ sơ .env: 'cloud' -> đọc .env.cloud (mặc định đọc .env)")
     args = parser.parse_args(argv)
 
     if args.file:
-        text = Path(args.file).read_text(encoding="utf-8")
-        source_name = Path(args.file).name
+        doc = load_document(args.file)
+        text, source_name = doc.text, doc.source_name
     else:
         text = args.text
         source_name = "inline"
 
-    settings = load_settings()
-    use_mock = args.mock or not settings.has_openai_key
+    if args.profile and not Path(f".env.{args.profile}").exists():
+        print(f"[!] Không thấy .env.{args.profile} -> dùng .env/biến môi trường mặc định.")
+    settings = load_settings(args.profile)
+    use_mock = args.mock or not settings.use_real_llm
 
     if use_mock:
         if not args.mock:
-            print("[i] Không có OPENAI_API_KEY -> tự chuyển sang chế độ --mock (offline).")
+            print("[i] Không có OPENAI_API_KEY/OPENAI_BASE_URL -> tự chuyển sang chế độ --mock (offline).")
         agent = RequirementAnalysisAgent(MockLLMClient(default_mock_extraction()), model_name="mock")
     else:
-        client = OpenAILLMClient(settings.openai_model, settings.openai_api_key)
+        client = OpenAILLMClient(
+            settings.openai_model, settings.openai_api_key, settings.openai_base_url
+        )
+        if settings.openai_base_url:
+            local = "localhost" in settings.openai_base_url or "127.0.0.1" in settings.openai_base_url
+            print(f"[i] LLM {'local' if local else 'cloud'}: {settings.openai_base_url} | model={settings.openai_model}")
+        else:
+            print(f"[i] OpenAI (trả phí) | model={settings.openai_model}")
         agent = RequirementAnalysisAgent(client, model_name=settings.openai_model)
 
     result = agent.analyze(text, source_name=source_name)
