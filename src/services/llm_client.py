@@ -6,12 +6,27 @@
 """
 from __future__ import annotations
 
-import json
+import re
 from typing import Protocol, TypeVar
 
 from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
+
+_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL | re.IGNORECASE)
+
+
+def _extract_json(content: str) -> str:
+    """Bóc khối JSON ngoài cùng từ đầu ra LLM (cắt code fence / lời dẫn)."""
+    text = content.strip()
+    fence = _FENCE_RE.search(text)
+    if fence:
+        text = fence.group(1).strip()
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end > start:
+        return text[start : end + 1]
+    return text
 
 
 class LLMClient(Protocol):
@@ -37,25 +52,25 @@ class MockLLMClient:
 class OpenAILLMClient:
     """Gọi OpenAI Chat Completions, ép trả JSON và parse vào schema Pydantic."""
 
-    def __init__(self, model: str, api_key: str):
-        from openai import OpenAI  # import lười: chỉ cần khi thực sự gọi OpenAI
+    def __init__(self, model: str, api_key: str, base_url: str = ""):
+        from openai import OpenAI
 
         self._model = model
-        self._client = OpenAI(api_key=api_key)
+        self._client = OpenAI(api_key=api_key or "local", base_url=base_url or None)
 
     def structured_completion(self, system_prompt: str, user_prompt: str, schema: type[T]) -> T:
-        schema_hint = (
-            "Chỉ trả về JSON hợp lệ, không kèm giải thích, khớp JSON schema sau:\n"
-            + json.dumps(schema.model_json_schema(), ensure_ascii=False)
-        )
+        json_schema = schema.model_json_schema()
         resp = self._client.chat.completions.create(
             model=self._model,
             messages=[
-                {"role": "system", "content": f"{system_prompt}\n\n{schema_hint}"},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            response_format={"type": "json_object"},
+            response_format={
+                "type": "json_schema",
+                "json_schema": {"name": schema.__name__, "schema": json_schema},
+            },
             temperature=0,
         )
         content = resp.choices[0].message.content or "{}"
-        return schema.model_validate_json(content)
+        return schema.model_validate_json(_extract_json(content))

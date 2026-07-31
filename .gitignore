@@ -30,7 +30,7 @@ artifacts/traces/*
 artifacts/reports/*
 
 # CLI demo output
-result.json
+result*.json
 
 # Local credentials and databases
 *.bak

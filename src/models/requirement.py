@@ -16,10 +16,10 @@ class AmbiguityType(str, Enum):
 
     MISSING_ACTOR = "missing_actor"
     MISSING_PRECONDITION = "missing_precondition"
-    VAGUE_QUANTIFIER = "vague_quantifier"          # "nhanh", "phù hợp", "nhiều"...
+    VAGUE_QUANTIFIER = "vague_quantifier"
     MISSING_EXPECTED_OUTCOME = "missing_expected_outcome"
     UNDERSPECIFIED_ACTION = "underspecified_action"
-    CONFLICT = "conflict"                           # mâu thuẫn giữa các yêu cầu
+    CONFLICT = "conflict"
     OTHER = "other"
 
 
