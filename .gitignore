@@ -32,6 +32,8 @@ artifacts/reports/*
 # CLI demo output
 result*.json
 test_design.json
+playwright_results.json
+artifacts/exec/
 
 # Local credentials and databases
 *.bak
