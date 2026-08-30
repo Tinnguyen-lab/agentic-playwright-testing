@@ -1,0 +1,68 @@
+{
+  "model": "deepseek-chat",
+  "n_cases": 5,
+  "n_gold_reqs": 15,
+  "n_pred_reqs": 15,
+  "count_mismatches": 0,
+  "clean_reqs": 5,
+  "overflag_clean": 4,
+  "by_type": {
+    "conflict": {
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1": 0.667
+    },
+    "missing_actor": {
+      "tp": 3,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.75,
+      "recall": 1.0,
+      "f1": 0.857
+    },
+    "missing_expected_outcome": {
+      "tp": 3,
+      "fp": 6,
+      "fn": 0,
+      "precision": 0.333,
+      "recall": 1.0,
+      "f1": 0.5
+    },
+    "missing_precondition": {
+      "tp": 1,
+      "fp": 9,
+      "fn": 0,
+      "precision": 0.1,
+      "recall": 1.0,
+      "f1": 0.182
+    },
+    "underspecified_action": {
+      "tp": 1,
+      "fp": 5,
+      "fn": 0,
+      "precision": 0.167,
+      "recall": 1.0,
+      "f1": 0.286
+    },
+    "vague_quantifier": {
+      "tp": 3,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.75,
+      "recall": 1.0,
+      "f1": 0.857
+    }
+  },
+  "micro": {
+    "tp": 12,
+    "fp": 23,
+    "fn": 0,
+    "precision": 0.343,
+    "recall": 1.0,
+    "f1": 0.511
+  },
+  "macro_f1": 0.558
+}
