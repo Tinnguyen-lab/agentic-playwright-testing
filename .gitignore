@@ -31,6 +31,7 @@ artifacts/reports/*
 
 # CLI demo output
 result*.json
+test_design.json
 
 # Local credentials and databases
 *.bak
