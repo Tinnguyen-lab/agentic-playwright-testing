@@ -33,6 +33,7 @@ artifacts/reports/*
 result*.json
 test_design.json
 playwright_results.json
+full_pipeline_results.json
 artifacts/exec/
 
 # Local credentials and databases
