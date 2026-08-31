@@ -54,3 +54,14 @@ def test_budget_exceeded_blocks():
     draft = RepairDraft(new_plan=_fixed_plan(), failure_type=FailureType.LOCATOR_NOT_FOUND)
     prop = RepairAgent(MockLLMClient(draft), model_name="mock").propose(_old_plan(), _failed_exec(), _tc(), attempt=3, budget=2)
     assert prop.outcome == RepairOutcome.BLOCKED_FOR_REVIEW
+
+
+def test_propose_with_healing_low_needs_approval():
+    # index 1 của _old_plan là FILL "Usernamex" -> chữa thành "Username" (chỉ đổi locator)
+    healed = PlaywrightAction(type=ActionType.FILL, strategy=LocatorStrategy.PLACEHOLDER, value="Username", arg="u")
+    prop = RepairAgent(model_name="det").propose_with_healing(_old_plan(), {1: healed}, _failed_exec(), _tc(), attempt=1)
+    assert prop.risk_level == RiskLevel.LOW
+    assert prop.requires_approval is True
+    assert prop.outcome == RepairOutcome.PROPOSED
+    assert prop.changed_kinds == ["locator_changed"]
+    assert prop.diff and prop.evidence == ["a.png"]

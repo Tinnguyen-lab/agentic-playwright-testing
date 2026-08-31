@@ -23,10 +23,9 @@ from src.models.approval import ApprovalDecision, ApprovalStatus
 from src.models.playwright_artifacts import (
     ActionType, GeneratedScript, LocatorStrategy, PlaywrightAction, PlaywrightPlan,
 )
-from src.models.repair import FailureType, RepairDraft, RepairOutcome
 from src.models.requirement import StructuredRequirement
 from src.models.test_case import TestCase, TestStep, TestType
-from src.services.llm_client import MockLLMClient
+from src.services.locator_healing import heal_action, propose_candidates
 from src.services.script_template import render_script
 from src.services.traceability import build_report, render_markdown
 
@@ -91,15 +90,19 @@ def main() -> int:
             print(f"  grounding: {grounded_ok}/{len(grounding)} khớp-đúng-1 | execution: {result.status.value}")
 
             if result.status.value != "passed":
-                # 3. Repair Agent — constrained, gated. Mock đề xuất sửa locator (Usernamex -> Username).
-                fixed = PlaywrightPlan(test_case_id=tc.id, target_url=URL, actions=_login_actions("Username"))
-                draft = RepairDraft(new_plan=fixed, failure_type=FailureType.LOCATOR_NOT_FOUND,
-                                    reason="Placeholder sai: 'Usernamex' -> 'Username'")
-                proposal = RepairAgent(MockLLMClient(draft), model_name="mock").propose(plan, result, tc, attempt=1)
-                repairs.append(proposal)
-                print(f"  repair: risk={proposal.risk_level.value} | outcome={proposal.outcome.value} "
-                      f"| requires_approval={proposal.requires_approval} | changed={proposal.changed_kinds}")
-                print("  -> ĐỀ XUẤT chờ người duyệt (AG-03..05), agent KHÔNG tự áp dụng.")
+                # 3. Repair Agent — self-healing locator TỪ DOM SỐNG, constrained + gated.
+                failed_idx = next((g.action_index for g in grounding if not g.ok), None)
+                healed = heal_action(plan.actions[failed_idx], propose_candidates(page, plan.actions[failed_idx]), counter) if failed_idx is not None else None
+                if healed is not None:
+                    proposal = RepairAgent(model_name="self-healing").propose_with_healing(
+                        plan, {failed_idx: healed}, result, tc, attempt=1)
+                    repairs.append(proposal)
+                    print(f"  repair(self-healing): risk={proposal.risk_level.value} | outcome={proposal.outcome.value} "
+                          f"| requires_approval={proposal.requires_approval} | changed={proposal.changed_kinds}")
+                    print(f"  -> {proposal.reason}")
+                    print("  -> ĐỀ XUẤT chờ người duyệt (AG-03..05), agent KHÔNG tự áp dụng.")
+                else:
+                    print("  repair: không tìm được locator thay thế UNIQUE -> chờ người xử lý (fail-closed).")
         browser.close()
 
     # 4. Traceability report
