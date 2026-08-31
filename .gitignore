@@ -29,6 +29,13 @@ artifacts/screenshots/*
 artifacts/traces/*
 artifacts/reports/*
 
+# CLI demo output
+result*.json
+test_design.json
+playwright_results.json
+full_pipeline_results.json
+artifacts/exec/
+
 # Local credentials and databases
 *.bak
 *.mdf
