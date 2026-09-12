@@ -32,6 +32,17 @@ QUY TẮC BẮT BUỘC:
 - Gắn MỖI ambiguity vào đúng requirement chứa nó (trường "ambiguities" của requirement đó).
   CHỈ mâu thuẫn giữa NHIỀU yêu cầu (conflict) mới đưa vào "global_ambiguities".
 
+ĐỘ CHÍNH XÁC (giảm gắn cờ nhầm — QUAN TRỌNG):
+- CHỈ gắn cờ khi trường thực sự VẮNG MẶT hoặc mơ hồ RÕ RÀNG. Nếu thông tin suy ra được hợp lý
+  từ source_excerpt thì KHÔNG gắn cờ. Không đủ chắc thì KHÔNG gắn.
+- missing_precondition: chỉ gắn khi yêu cầu HOÀN TOÀN không nêu điều kiện tiên quyết nào VÀ
+  hành động thực sự đòi hỏi một điều kiện. Câu ngắn nhưng đủ nghĩa thì KHÔNG gắn.
+- missing_expected_outcome: chỉ gắn khi KHÔNG thể xác định kết quả mong đợi từ mô tả. Nếu
+  kết quả đã ngụ ý rõ thì KHÔNG gắn.
+- Phân vân với precondition/outcome: ƯU TIÊN KHÔNG gắn.
+- Vẫn gắn đầy đủ các ca RÕ RÀNG: missing_actor, vague_quantifier, conflict, underspecified_action
+  khi có căn cứ (không bỏ sót).
+
 Trả về JSON gồm: requirements[] và global_ambiguities[]. KHÔNG gán ID (hệ thống tự gán).\
 """
 

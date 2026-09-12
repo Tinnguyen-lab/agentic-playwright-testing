@@ -5,7 +5,7 @@
   "n_pred_reqs": 15,
   "count_mismatches": 0,
   "clean_reqs": 5,
-  "overflag_clean": 2,
+  "overflag_clean": 0,
   "by_type": {
     "conflict": {
       "tp": 1,
@@ -24,28 +24,28 @@
       "f1": 1.0
     },
     "missing_expected_outcome": {
-      "tp": 3,
-      "fp": 2,
-      "fn": 0,
-      "precision": 0.6,
-      "recall": 1.0,
-      "f1": 0.75
+      "tp": 2,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0.667,
+      "recall": 0.667,
+      "f1": 0.667
     },
     "missing_precondition": {
-      "tp": 1,
-      "fp": 6,
-      "fn": 0,
-      "precision": 0.143,
-      "recall": 1.0,
-      "f1": 0.25
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
     },
     "underspecified_action": {
       "tp": 1,
-      "fp": 1,
+      "fp": 2,
       "fn": 0,
-      "precision": 0.5,
+      "precision": 0.333,
       "recall": 1.0,
-      "f1": 0.667
+      "f1": 0.5
     },
     "vague_quantifier": {
       "tp": 3,
@@ -57,12 +57,12 @@
     }
   },
   "micro": {
-    "tp": 12,
-    "fp": 9,
-    "fn": 0,
-    "precision": 0.571,
-    "recall": 1.0,
-    "f1": 0.727
+    "tp": 10,
+    "fp": 4,
+    "fn": 2,
+    "precision": 0.714,
+    "recall": 0.833,
+    "f1": 0.769
   },
-  "macro_f1": 0.778
+  "macro_f1": 0.694
 }
