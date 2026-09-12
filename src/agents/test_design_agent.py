@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 
 from src.models.requirement import StructuredRequirement
 from src.models.test_case import TestCaseDraft, TestDesignResult, TraceLink
+from src.services.boundary_analysis import derive_boundary_cases
 from src.services.llm_client import LLMClient
 
 SYSTEM_PROMPT = """\
@@ -22,6 +23,8 @@ QUY TẮC BẮT BUỘC:
   expected_result.
 - KHÔNG tạo expected_result vượt quá phạm vi requirement đã duyệt.
 - Bám actor/precondition/action/expected_outcome của requirement.
+- Hệ thống TỰ bổ sung case biên (boundary) từ ràng buộc SỐ; hãy tập trung positive và
+  negative theo ngữ nghĩa, không cần liệt kê từng giá trị biên số.
 - KHÔNG gán ID (hệ thống tự gán).
 
 Trả về JSON gồm: test_cases[].\
@@ -40,9 +43,11 @@ class TestDesignAgent:
         user_prompt = self._build_user_prompt(requirement)
         draft = self._llm.structured_completion(SYSTEM_PROMPT, user_prompt, TestCaseDraft)
 
+        all_cases = list(draft.test_cases) + derive_boundary_cases(requirement)
+
         cases = []
         links = []
-        for index, tc in enumerate(draft.test_cases, start=1):
+        for index, tc in enumerate(all_cases, start=1):
             tc_id = f"{requirement.id}-TC-{index:02d}"
             cases.append(tc.model_copy(update={"id": tc_id, "requirement_id": requirement.id}))
             links.append(TraceLink(from_id=requirement.id, to_id=tc_id, link_type="requirement->test_case"))
