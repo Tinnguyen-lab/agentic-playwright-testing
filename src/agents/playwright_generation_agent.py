@@ -6,6 +6,7 @@ Grounding tách thành hàm thuần `ground_actions(actions, count_fn)` để te
 from __future__ import annotations
 
 from src.models.playwright_artifacts import (
+    ActionType,
     GeneratedScript,
     GroundingRecord,
     LocatorStrategy,
@@ -48,23 +49,67 @@ def ground_actions(actions, count_fn) -> list[GroundingRecord]:
     return records
 
 
+def build_locator(page, strategy: LocatorStrategy, value: str, role_name: str):
+    """Dựng Playwright locator từ (strategy, value, role_name) trên page thật."""
+    if strategy == LocatorStrategy.ROLE:
+        return page.get_by_role(value, name=role_name) if role_name else page.get_by_role(value)
+    if strategy == LocatorStrategy.LABEL:
+        return page.get_by_label(value)
+    if strategy == LocatorStrategy.PLACEHOLDER:
+        return page.get_by_placeholder(value)
+    if strategy == LocatorStrategy.TEXT:
+        return page.get_by_text(value)
+    if strategy == LocatorStrategy.TEST_ID:
+        return page.get_by_test_id(value)
+    return page.locator(value)
+
+
 def live_count_fn(page):
     """count_fn dựa trên một Playwright page thật."""
     def count(strategy: LocatorStrategy, value: str, role_name: str) -> int:
-        if strategy == LocatorStrategy.ROLE:
-            loc = page.get_by_role(value, name=role_name) if role_name else page.get_by_role(value)
-        elif strategy == LocatorStrategy.LABEL:
-            loc = page.get_by_label(value)
-        elif strategy == LocatorStrategy.PLACEHOLDER:
-            loc = page.get_by_placeholder(value)
-        elif strategy == LocatorStrategy.TEXT:
-            loc = page.get_by_text(value)
-        elif strategy == LocatorStrategy.TEST_ID:
-            loc = page.get_by_test_id(value)
-        else:
-            loc = page.locator(value)
-        return loc.count()
+        return build_locator(page, strategy, value, role_name).count()
     return count
+
+
+def _advance(page, action, locator, matched):
+    """Thực thi action để đẩy trạng thái trang sang bước kế (goto/fill/click). Assertion không đổi state."""
+    if action.type == ActionType.GOTO and action.arg:
+        page.goto(action.arg)
+    elif matched and locator is not None:
+        try:
+            if action.type == ActionType.FILL:
+                locator.first.fill(action.arg)
+            elif action.type == ActionType.CLICK:
+                locator.first.click()
+        except Exception:
+            pass
+
+
+def ground_flow(page, actions, wait_ms: int = 3000) -> list[GroundingRecord]:
+    """Multi-step grounding: đi theo luồng, ground mỗi locator trên DOM TẠI BƯỚC ĐÓ rồi mới đẩy trạng thái.
+
+    Khác `ground_actions` (đếm trên một ảnh chụp tĩnh): phần tử xuất hiện sau điều hướng được ground đúng.
+    """
+    records = []
+    for index, action in enumerate(actions):
+        locator = None
+        matched = None
+        if action.strategy is not None:
+            locator = build_locator(page, action.strategy, action.value, action.role_name)
+            try:
+                locator.first.wait_for(state="attached", timeout=wait_ms)
+            except Exception:
+                pass
+            matched = locator.count()
+            records.append(GroundingRecord(
+                action_index=index,
+                strategy=action.strategy.value,
+                value=action.value or action.role_name,
+                matched_count=matched,
+                ok=(matched == 1),
+            ))
+        _advance(page, action, locator, matched)
+    return records
 
 
 class PlaywrightGenerationAgent:

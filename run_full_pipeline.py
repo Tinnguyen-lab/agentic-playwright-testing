@@ -17,7 +17,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 from src.agents.execution_agent import ExecutionAgent
-from src.agents.playwright_generation_agent import ground_actions, live_count_fn
+from src.agents.playwright_generation_agent import ground_flow, live_count_fn
 from src.agents.repair_agent import RepairAgent
 from src.models.approval import ApprovalDecision, ApprovalStatus
 from src.models.playwright_artifacts import (
@@ -41,6 +41,7 @@ def _login_actions(username_placeholder: str) -> list[PlaywrightAction]:
         PlaywrightAction(type=ActionType.FILL, strategy=LocatorStrategy.PLACEHOLDER, value="Password", arg="secret_sauce"),
         PlaywrightAction(type=ActionType.CLICK, strategy=LocatorStrategy.ROLE, value="button", role_name="Login"),
         PlaywrightAction(type=ActionType.EXPECT_URL, arg="https://www.saucedemo.com/inventory.html"),
+        PlaywrightAction(type=ActionType.EXPECT_VISIBLE, strategy=LocatorStrategy.CSS, value=".inventory_list"),  # chỉ có SAU khi login
     ]
 
 
@@ -80,7 +81,7 @@ def main() -> int:
         for tc in (tc_ok, tc_bad):
             plan = plans[tc.id]
             page.goto(URL)
-            grounding = ground_actions(plan.actions, counter)
+            grounding = ground_flow(page, plan.actions)
             script = GeneratedScript(test_case_id=tc.id, code=render_script(plan, screenshot=f"{tc.id}.png"), grounding=grounding)
             result = executor.run(script, WORKDIR)
             executions.append(result)
