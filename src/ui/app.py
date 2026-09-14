@@ -8,7 +8,12 @@ mở rộng sau — hiện chạy bằng CLI (run_full_pipeline.py).
 """
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+_ROOT = Path(__file__).resolve().parents[2]  # src/ui/app.py -> gốc dự án
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))  # để 'streamlit run' (chỉ thêm src/ui vào path) import được gốc
 
 import streamlit as st
 
@@ -20,7 +25,7 @@ from src.models.test_case import TestCase, TestCaseDraft, TestType
 from src.ui.review import approved_requirement_ids
 from src.utils.cli import resolve_client
 
-SAMPLE = Path("datasets/reference/sample_requirements.md")
+SAMPLE = _ROOT / "datasets/reference/sample_requirements.md"
 
 
 def _design_mock() -> TestCaseDraft:
