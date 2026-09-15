@@ -2,17 +2,17 @@
 
     python run_rq2.py --profile cloud   # DeepSeek (cần .env.cloud)
     python run_rq2.py                    # LLM trong .env (local)
-    python run_rq2.py --mock             # offline smoke (plan dựng sẵn, số không có ý nghĩa)
 
-Nhiều target thật (SauceDemo, the-internet, practice-test-login). Với mỗi test case:
-PlaywrightGenerationAgent.plan (LLM) -> render script -> ExecutionAgent chạy thật -> ghi pass/fail.
-In first-run pass rate theo từng target + tổng + JSON.
+Đọc catalog target từ datasets/reference/rq2_targets.json (data-driven — cộng dồn tới >=50).
+Mỗi target: PlaywrightGenerationAgent.plan (LLM) -> render script -> ExecutionAgent chạy thật
+-> ghi pass/fail. In first-run pass rate theo site + tổng + JSON.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 from src.agents.execution_agent import ExecutionAgent
@@ -24,51 +24,18 @@ from src.models.test_case import TestCase, TestStep, TestType
 from src.services.script_template import render_script
 from src.utils.cli import resolve_client
 
+CATALOG = "datasets/reference/rq2_targets.json"
 WORKDIR = Path("artifacts/exec_rq2")
 
 
-def _tc(id_, title, ttype, steps, expected):
-    return TestCase(id=id_, title=title, type=ttype,
-                    steps=[TestStep(action=a, expected=e) for a, e in steps], expected_result=expected)
-
-
-def _targets() -> list[tuple[str, str, list[TestCase]]]:
-    return [
-        ("SauceDemo", "https://www.saucedemo.com/", [
-            _tc("SD-01", "Đăng nhập hợp lệ", TestType.POSITIVE,
-                [("Nhập username 'standard_user' và password 'secret_sauce'", ""),
-                 ("Bấm nút Login", "Chuyển tới trang sản phẩm")],
-                "Đăng nhập thành công, URL là https://www.saucedemo.com/inventory.html"),
-            _tc("SD-02", "Sai mật khẩu", TestType.NEGATIVE,
-                [("Nhập username 'standard_user' và password 'wrong_password'", ""),
-                 ("Bấm Login", "Hiện thông báo lỗi")],
-                "Hiện thông báo lỗi chứa 'Username and password do not match'"),
-            _tc("SD-03", "Tài khoản bị khoá", TestType.NEGATIVE,
-                [("Nhập username 'locked_out_user' và password 'secret_sauce'", ""),
-                 ("Bấm Login", "Hiện thông báo bị khoá")],
-                "Hiện thông báo chứa 'Sorry, this user has been locked out'"),
-        ]),
-        ("the-internet", "https://the-internet.herokuapp.com/login", [
-            _tc("TI-01", "Đăng nhập hợp lệ", TestType.POSITIVE,
-                [("Nhập username 'tomsmith' và password 'SuperSecretPassword!'", ""),
-                 ("Bấm nút Login", "Vào khu vực bảo mật")],
-                "Hiện thông báo chứa 'You logged into a secure area!'"),
-            _tc("TI-02", "Sai thông tin", TestType.NEGATIVE,
-                [("Nhập username 'baduser' và password 'badpass'", ""),
-                 ("Bấm Login", "Hiện lỗi")],
-                "Hiện thông báo chứa 'Your username is invalid!'"),
-        ]),
-        ("practice-test-login", "https://practicetestautomation.com/practice-test-login/", [
-            _tc("PT-01", "Đăng nhập hợp lệ", TestType.POSITIVE,
-                [("Nhập username 'student' và password 'Password123'", ""),
-                 ("Bấm nút Submit", "Đăng nhập thành công")],
-                "Hiện thông báo chứa 'Logged In Successfully'"),
-            _tc("PT-02", "Sai username", TestType.NEGATIVE,
-                [("Nhập username 'incorrectUser' và password 'Password123'", ""),
-                 ("Bấm Submit", "Hiện lỗi")],
-                "Hiện thông báo chứa 'Your username is invalid!'"),
-        ]),
-    ]
+def _load_targets(path: str):
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    out = []
+    for t in data["targets"]:
+        tc = TestCase(id=t["id"], title=t.get("title", t["id"]), type=TestType(t.get("type", "positive")),
+                      steps=[TestStep(action=s) for s in t["steps"]], expected_result=t["expected_result"])
+        out.append((t.get("site", "?"), t["url"], tc))
+    return out
 
 
 def _mock_plan() -> PlaywrightPlan:
@@ -90,6 +57,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="RQ2: first-run pass rate của script do LLM sinh (nhiều target)")
     ap.add_argument("--profile", help="Hồ sơ .env: 'cloud' -> .env.cloud")
     ap.add_argument("--mock", action="store_true", help="Offline smoke (plan dựng sẵn)")
+    ap.add_argument("--catalog", default=CATALOG)
     ap.add_argument("--out", default="rq2_results.json")
     args = ap.parse_args(argv)
 
@@ -98,31 +66,31 @@ def main(argv: list[str] | None = None) -> int:
     executor = ExecutionAgent()
     WORKDIR.mkdir(parents=True, exist_ok=True)
 
-    targets_out = []
-    total_pass = total_n = 0
-    for name, url, tcs in _targets():
-        print(f"\n### Target: {name} ({url})")
-        tp = 0
-        cases = []
-        for tc in tcs:
-            plan = agent.plan(tc, url)
-            script = GeneratedScript(test_case_id=tc.id, code=render_script(plan, screenshot=f"{tc.id}.png"))
-            result = executor.run(script, WORKDIR)
-            ok = result.status.value == "passed"
-            tp += ok
-            cases.append({"id": tc.id, "title": tc.title, "status": result.status.value})
-            print(f"  [{tc.id}] {tc.title}: {result.status.value.upper()}")
-        total_pass += tp
-        total_n += len(tcs)
-        targets_out.append({"target": name, "url": url, "passed": tp, "n": len(tcs),
-                            "first_run_pass_rate": tp / len(tcs), "cases": cases})
-        print(f"  -> {name}: {tp}/{len(tcs)} = {tp/len(tcs):.0%}")
+    targets = _load_targets(args.catalog)
+    print(f"[i] {len(targets)} target | model={model}")
+    by_site = defaultdict(lambda: [0, 0])
+    rows = []
+    total_pass = 0
+    for site, url, tc in targets:
+        plan = agent.plan(tc, url)
+        script = GeneratedScript(test_case_id=tc.id, code=render_script(plan, screenshot=f"{tc.id}.png"))
+        result = executor.run(script, WORKDIR)
+        ok = result.status.value == "passed"
+        total_pass += ok
+        by_site[site][0] += ok
+        by_site[site][1] += 1
+        rows.append({"id": tc.id, "site": site, "url": url, "status": result.status.value})
+        print(f"  [{tc.id:6}] {site:24} {result.status.value.upper()}")
 
-    print(f"\n=== RQ2 first-run pass rate (tổng, {len(targets_out)} target): "
-          f"{total_pass}/{total_n} = {total_pass/total_n:.0%} | model={model} ===")
+    n = len(targets)
+    print("\n--- Theo site ---")
+    for site, (p, tot) in sorted(by_site.items()):
+        print(f"  {site:24} {p}/{tot} = {p/tot:.0%}")
+    print(f"\n=== RQ2 first-run pass rate: {total_pass}/{n} = {total_pass/n:.0%} | {len(by_site)} site | model={model} ===")
+
     Path(args.out).write_text(json.dumps(
-        {"model": model, "n_targets": len(targets_out), "passed": total_pass, "n": total_n,
-         "first_run_pass_rate": total_pass / total_n if total_n else 0.0, "targets": targets_out},
+        {"model": model, "n": n, "passed": total_pass, "first_run_pass_rate": total_pass / n if n else 0.0,
+         "by_site": {s: {"passed": v[0], "n": v[1]} for s, v in by_site.items()}, "cases": rows},
         ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[✓] JSON: {args.out}")
     return 0
