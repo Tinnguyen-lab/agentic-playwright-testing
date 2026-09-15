@@ -34,7 +34,9 @@ result*.json
 test_design.json
 playwright_results.json
 full_pipeline_results.json
+rq2_results.json
 artifacts/exec/
+artifacts/exec_rq2/
 
 # Local credentials and databases
 *.bak
