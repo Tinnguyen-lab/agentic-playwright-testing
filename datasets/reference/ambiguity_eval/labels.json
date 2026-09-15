@@ -1,0 +1,50 @@
+{
+  "_note": "Ground truth: nhãn mơ hồ được CHÈN CÓ CHỦ ĐÍCH vào từng UC. Thứ tự 'requirements' khớp thứ tự UC trong file. Người dùng nên review & sở hữu bộ nhãn này (là ground truth luận văn).",
+  "cases": [
+    {
+      "file": "cases/auth.md",
+      "requirements": [
+        {"hint": "UC-1 Đăng nhập", "expected": []},
+        {"hint": "UC-2 Đổi mật khẩu", "expected": ["missing_actor"]},
+        {"hint": "UC-3 Khoá tài khoản", "expected": ["vague_quantifier"]}
+      ],
+      "expected_global": []
+    },
+    {
+      "file": "cases/search.md",
+      "requirements": [
+        {"hint": "UC-1 Tìm kiếm cơ bản", "expected": []},
+        {"hint": "UC-2 Tốc độ tìm kiếm", "expected": ["vague_quantifier"]},
+        {"hint": "UC-3 Xem tất cả kết quả", "expected": []}
+      ],
+      "expected_global": ["conflict"]
+    },
+    {
+      "file": "cases/cart.md",
+      "requirements": [
+        {"hint": "UC-1 Thêm vào giỏ", "expected": ["missing_expected_outcome"]},
+        {"hint": "UC-2 Thanh toán", "expected": ["missing_precondition"]},
+        {"hint": "UC-3 Xử lý đơn", "expected": ["underspecified_action"]}
+      ],
+      "expected_global": []
+    },
+    {
+      "file": "cases/profile.md",
+      "requirements": [
+        {"hint": "UC-1 Xem hồ sơ", "expected": []},
+        {"hint": "UC-2 Cập nhật hồ sơ", "expected": ["missing_actor", "missing_expected_outcome"]}
+      ],
+      "expected_global": []
+    },
+    {
+      "file": "cases/booking.md",
+      "requirements": [
+        {"hint": "UC-1 Tìm chuyến", "expected": ["vague_quantifier"]},
+        {"hint": "UC-2 Đặt chỗ", "expected": []},
+        {"hint": "UC-3 Huỷ chỗ", "expected": ["missing_actor"]},
+        {"hint": "UC-4 Hoàn tiền", "expected": ["missing_expected_outcome"]}
+      ],
+      "expected_global": []
+    }
+  ]
+}
