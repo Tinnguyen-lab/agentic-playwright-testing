@@ -1,5 +1,5 @@
 {
- "_note": "Ground truth: nhãn mơ hồ được CHÈN CÓ CHỦ ĐÍCH vào từng UC. Thứ tự 'requirements' khớp thứ tự UC trong file. 5 tài liệu đầu do nhóm soạn; 10 tài liệu sau (library..ticket) do Claude soạn nháp, nhóm cần review. Người dùng sở hữu bộ nhãn này (ground truth luận văn).",
+ "_note": "Ground truth: nhãn mơ hồ được CHÈN CÓ CHỦ ĐÍCH vào từng UC. Thứ tự 'requirements' khớp thứ tự UC trong file. 5 tài liệu đầu do nhóm soạn; 10 tài liệu sau (library..ticket) do Claude soạn nháp, nhóm cần review. Người dùng sở hữu bộ nhãn này (ground truth luận văn). 10 tài liệu trong cases/heldout/ là tập kiểm thử độc lập: soạn SAU khi đã chốt prompt và thuật toán (07/10/2026), không dùng để chỉnh hệ thống; Claude soạn nháp, nhóm review.",
  "cases": [
   {
    "file": "cases/auth.md",
@@ -330,6 +330,253 @@
     },
     {
      "hint": "UC-4 Độ dài tiêu đề",
+     "expected": []
+    }
+   ],
+   "expected_global": [
+    "conflict"
+   ]
+  },
+  {
+   "file": "cases/heldout/parking.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Gửi xe",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Lấy xe",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Mất vé",
+     "expected": [
+      "underspecified_action",
+      "missing_expected_outcome"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/heldout/clinic.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Đặt lịch",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Huỷ lịch",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Nhắc lịch",
+     "expected": [
+      "vague_quantifier"
+     ]
+    },
+    {
+     "hint": "UC-4 Kết quả khám",
+     "expected": [
+      "missing_actor"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/heldout/recruitment.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Nộp hồ sơ",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Sàng lọc",
+     "expected": [
+      "vague_quantifier"
+     ]
+    },
+    {
+     "hint": "UC-3 Mời phỏng vấn",
+     "expected": []
+    },
+    {
+     "hint": "UC-4 Rút hồ sơ",
+     "expected": [
+      "missing_expected_outcome"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/heldout/bill.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Tra cứu hoá đơn",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Thanh toán",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Huỷ thanh toán",
+     "expected": [
+      "missing_precondition"
+     ]
+    },
+    {
+     "hint": "UC-4 Thanh toán tự động",
+     "expected": []
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/heldout/gym.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Đăng ký gói tập",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Đặt lớp",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Bảo lưu",
+     "expected": [
+      "vague_quantifier"
+     ]
+    },
+    {
+     "hint": "UC-4 Check-in",
+     "expected": [
+      "missing_actor",
+      "missing_expected_outcome"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/heldout/car_rental.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Tìm xe",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Đặt xe",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Thời gian thuê",
+     "expected": []
+    },
+    {
+     "hint": "UC-4 Đặt cọc",
+     "expected": []
+    }
+   ],
+   "expected_global": [
+    "conflict"
+   ]
+  },
+  {
+   "file": "cases/heldout/exam.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Đăng ký thi",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Phúc khảo",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Hoãn thi",
+     "expected": [
+      "underspecified_action",
+      "missing_expected_outcome"
+     ]
+    },
+    {
+     "hint": "UC-4 Xem lịch thi",
+     "expected": []
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/heldout/shipping.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Tạo đơn giao",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Theo dõi đơn",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Giao thất bại",
+     "expected": [
+      "missing_actor"
+     ]
+    },
+    {
+     "hint": "UC-4 Hoàn hàng",
+     "expected": []
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/heldout/attendance.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Chấm công vào",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Đi muộn",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Giải trình",
+     "expected": [
+      "vague_quantifier"
+     ]
+    },
+    {
+     "hint": "UC-4 Báo cáo",
+     "expected": [
+      "missing_actor"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/heldout/loyalty.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Tích điểm",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Đổi điểm",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Hết hạn điểm",
+     "expected": []
+    },
+    {
+     "hint": "UC-4 Hạng thành viên",
      "expected": []
     }
    ],

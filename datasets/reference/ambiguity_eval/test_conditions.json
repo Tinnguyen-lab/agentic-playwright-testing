@@ -1,5 +1,5 @@
 {
- "_note": "Điều kiện kiểm thử gold cho RQ1 (độ phủ test case). Mỗi điều kiện là một hành vi kiểm thử được rút từ tài liệu như đang viết; boundary = giá trị tại hoặc ngay ngoài biên. Claude soạn nháp, nhóm review.",
+ "_note": "Điều kiện kiểm thử gold cho RQ1 (độ phủ test case). Mỗi điều kiện là một hành vi kiểm thử được rút từ tài liệu như đang viết; boundary = giá trị tại hoặc ngay ngoài biên. Claude soạn nháp, nhóm review. cases/heldout/: tập kiểm thử độc lập, soạn sau khi chốt hệ thống.",
  "cases": {
   "cases/auth.md": [
    {
@@ -527,6 +527,476 @@
     "uc": 4,
     "kind": "negative",
     "condition": "Mâu thuẫn độ dài tiêu đề (100 ở UC-1, 50 ở UC-4) được phát hiện hoặc kiểm tra"
+   }
+  ],
+  "cases/heldout/parking.md": [
+   {
+    "id": "G1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Gửi xe thì được cấp vé có mã và giờ vào"
+   },
+   {
+    "id": "G2",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Ô tô thứ 200 vẫn được cấp vé"
+   },
+   {
+    "id": "G3",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Khi đã có 200 ô tô, ô tô tiếp theo bị từ chối và cổng hiển thị 'Hết chỗ'"
+   },
+   {
+    "id": "G4",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Xe máy ra bãi bị tính 5.000 đồng và barie mở"
+   },
+   {
+    "id": "G5",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Ô tô ra bãi bị tính 30.000 đồng và barie mở"
+   },
+   {
+    "id": "G6",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Nhân viên xử lý được trường hợp khách báo mất vé"
+   }
+  ],
+  "cases/heldout/clinic.md": [
+   {
+    "id": "M1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Đặt lịch hợp lệ thì khung giờ chuyển 'Đã đặt' và có SMS xác nhận"
+   },
+   {
+    "id": "M2",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Đặt được khung giờ vào ngày thứ 14"
+   },
+   {
+    "id": "M3",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Không đặt được khung giờ vào ngày thứ 15"
+   },
+   {
+    "id": "M4",
+    "uc": 1,
+    "kind": "negative",
+    "condition": "Khung giờ đã có người đặt thì không chọn được"
+   },
+   {
+    "id": "M5",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Huỷ trước giờ khám từ 24 giờ trở lên thì khung giờ trống lại"
+   },
+   {
+    "id": "M6",
+    "uc": 2,
+    "kind": "boundary",
+    "condition": "Huỷ khi còn dưới 24 giờ thì bị từ chối"
+   },
+   {
+    "id": "M7",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Bệnh nhân nhận tin nhắc trước giờ khám"
+   },
+   {
+    "id": "M8",
+    "uc": 4,
+    "kind": "positive",
+    "condition": "Xem được kết quả khám và đơn thuốc"
+   }
+  ],
+  "cases/heldout/recruitment.md": [
+   {
+    "id": "J1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Nộp CV PDF không quá 5 MB thì hiển thị 'Đã nhận hồ sơ'"
+   },
+   {
+    "id": "J2",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "CV đúng 5 MB được nhận"
+   },
+   {
+    "id": "J3",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "CV lớn hơn 5 MB bị từ chối"
+   },
+   {
+    "id": "J4",
+    "uc": 1,
+    "kind": "negative",
+    "condition": "CV không phải PDF bị từ chối"
+   },
+   {
+    "id": "J5",
+    "uc": 1,
+    "kind": "negative",
+    "condition": "Vị trí đã đóng thì không nộp hồ sơ được"
+   },
+   {
+    "id": "J6",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Nhà tuyển dụng lọc được danh sách hồ sơ"
+   },
+   {
+    "id": "J7",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Chuyển hồ sơ sang 'Đạt' thì ứng viên nhận email mời phỏng vấn"
+   },
+   {
+    "id": "J8",
+    "uc": 4,
+    "kind": "positive",
+    "condition": "Ứng viên rút được hồ sơ đã nộp"
+   }
+  ],
+  "cases/heldout/bill.md": [
+   {
+    "id": "H1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Mã 10 chữ số hợp lệ thì hiển thị hoá đơn chưa thanh toán"
+   },
+   {
+    "id": "H2",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Mã 9 hoặc 11 chữ số thì hiển thị 'Mã khách hàng không hợp lệ'"
+   },
+   {
+    "id": "H3",
+    "uc": 1,
+    "kind": "negative",
+    "condition": "Mã có ký tự không phải chữ số thì bị báo không hợp lệ"
+   },
+   {
+    "id": "H4",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Thanh toán bằng ví thì hoá đơn chuyển 'Đã thanh toán'"
+   },
+   {
+    "id": "H5",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Huỷ giao dịch thì tiền được hoàn vào ví"
+   },
+   {
+    "id": "H6",
+    "uc": 4,
+    "kind": "positive",
+    "condition": "Bật thanh toán tự động thì tiền bị trừ vào ngày đến hạn"
+   }
+  ],
+  "cases/heldout/gym.md": [
+   {
+    "id": "Y1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Đăng ký gói thì thẻ được kích hoạt với thời hạn đúng gói"
+   },
+   {
+    "id": "Y2",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Lớp còn chỗ thì đặt chỗ được"
+   },
+   {
+    "id": "Y3",
+    "uc": 2,
+    "kind": "boundary",
+    "condition": "Người thứ 20 vẫn đặt chỗ được"
+   },
+   {
+    "id": "Y4",
+    "uc": 2,
+    "kind": "boundary",
+    "condition": "Lớp đủ 20 người thì nút 'Đặt chỗ' bị vô hiệu"
+   },
+   {
+    "id": "Y5",
+    "uc": 2,
+    "kind": "negative",
+    "condition": "Thẻ hết hạn thì không đặt chỗ được"
+   },
+   {
+    "id": "Y6",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Hội viên bảo lưu được thẻ"
+   },
+   {
+    "id": "Y7",
+    "uc": 4,
+    "kind": "positive",
+    "condition": "Quét thẻ tại quầy được"
+   }
+  ],
+  "cases/heldout/car_rental.md": [
+   {
+    "id": "F1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Chọn ngày nhận và trả thì hiển thị xe còn trống trong khoảng đó"
+   },
+   {
+    "id": "F2",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Khách đủ điều kiện đặt xe thì nhận mã đặt xe"
+   },
+   {
+    "id": "F3",
+    "uc": 2,
+    "kind": "boundary",
+    "condition": "Khách đúng 21 tuổi đặt được"
+   },
+   {
+    "id": "F4",
+    "uc": 2,
+    "kind": "boundary",
+    "condition": "Khách 20 tuổi bị từ chối"
+   },
+   {
+    "id": "F5",
+    "uc": 2,
+    "kind": "negative",
+    "condition": "Giấy phép lái xe hết hiệu lực thì bị từ chối"
+   },
+   {
+    "id": "F6",
+    "uc": 3,
+    "kind": "boundary",
+    "condition": "Thuê 1 ngày hoặc 30 ngày thì được"
+   },
+   {
+    "id": "F7",
+    "uc": 3,
+    "kind": "boundary",
+    "condition": "Thuê 31 ngày thì không được"
+   },
+   {
+    "id": "F8",
+    "uc": 4,
+    "kind": "negative",
+    "condition": "Mâu thuẫn mức đặt cọc (30% ở UC-2, 50% ở UC-4) được phát hiện hoặc kiểm tra"
+   }
+  ],
+  "cases/heldout/exam.md": [
+   {
+    "id": "E1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Đăng ký thành công thì môn hiển thị trong 'Lịch thi của tôi'"
+   },
+   {
+    "id": "E2",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Đăng ký môn thứ 8 được"
+   },
+   {
+    "id": "E3",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Đăng ký môn thứ 9 bị từ chối"
+   },
+   {
+    "id": "E4",
+    "uc": 1,
+    "kind": "negative",
+    "condition": "Ngoài thời gian mở đăng ký thì không đăng ký được"
+   },
+   {
+    "id": "E5",
+    "uc": 1,
+    "kind": "negative",
+    "condition": "Môn không học trong học kỳ thì không đăng ký được"
+   },
+   {
+    "id": "E6",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Đơn phúc khảo hợp lệ chuyển 'Đang xử lý'"
+   },
+   {
+    "id": "E7",
+    "uc": 2,
+    "kind": "boundary",
+    "condition": "Nộp đơn vào ngày thứ 7 sau công bố điểm thì được"
+   },
+   {
+    "id": "E8",
+    "uc": 2,
+    "kind": "boundary",
+    "condition": "Nộp đơn vào ngày thứ 8 thì bị từ chối"
+   },
+   {
+    "id": "E9",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Sinh viên làm được thủ tục hoãn thi"
+   },
+   {
+    "id": "E10",
+    "uc": 4,
+    "kind": "positive",
+    "condition": "Lịch thi hiển thị phòng, ngày, giờ của các môn đã đăng ký"
+   }
+  ],
+  "cases/heldout/shipping.md": [
+   {
+    "id": "N1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Tạo đơn hợp lệ thì có phí và mã vận đơn"
+   },
+   {
+    "id": "N2",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Khối lượng 0,1 kg hoặc 30 kg thì tạo được"
+   },
+   {
+    "id": "N3",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Khối lượng dưới 0,1 kg hoặc trên 30 kg thì không tạo được"
+   },
+   {
+    "id": "N4",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Nhập mã vận đơn thì thấy trạng thái đơn"
+   },
+   {
+    "id": "N5",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Giao không thành công thì đơn được giao lại"
+   },
+   {
+    "id": "N6",
+    "uc": 4,
+    "kind": "boundary",
+    "condition": "Thất bại lần thứ 3 thì đơn chuyển 'Hoàn hàng'"
+   },
+   {
+    "id": "N7",
+    "uc": 4,
+    "kind": "boundary",
+    "condition": "Thất bại lần thứ 2 thì đơn chưa chuyển 'Hoàn hàng'"
+   }
+  ],
+  "cases/heldout/attendance.md": [
+   {
+    "id": "Z1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Trong bán kính thì chấm công được"
+   },
+   {
+    "id": "Z2",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Ở đúng 100 m thì chấm công được"
+   },
+   {
+    "id": "Z3",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Ngoài 100 m thì hiển thị 'Ngoài khu vực chấm công'"
+   },
+   {
+    "id": "Z4",
+    "uc": 2,
+    "kind": "boundary",
+    "condition": "Chấm đúng 8 giờ 30 thì không bị tính đi muộn"
+   },
+   {
+    "id": "Z5",
+    "uc": 2,
+    "kind": "boundary",
+    "condition": "Chấm 8 giờ 31 thì bị ghi nhận đi muộn"
+   },
+   {
+    "id": "Z6",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Nhân viên gửi được giải trình và quản lý duyệt được"
+   },
+   {
+    "id": "Z7",
+    "uc": 4,
+    "kind": "positive",
+    "condition": "Xuất được báo cáo chấm công tháng"
+   }
+  ],
+  "cases/heldout/loyalty.md": [
+   {
+    "id": "D1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Hoá đơn đã thanh toán được tích 1 điểm cho mỗi 10.000 đồng"
+   },
+   {
+    "id": "D2",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Hoá đơn 9.999 đồng không được điểm, 10.000 đồng được 1 điểm"
+   },
+   {
+    "id": "D3",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Đổi điểm thành công thì điểm bị trừ và voucher hiển thị trong ví"
+   },
+   {
+    "id": "D4",
+    "uc": 2,
+    "kind": "boundary",
+    "condition": "Có đúng 100 điểm thì đổi được"
+   },
+   {
+    "id": "D5",
+    "uc": 2,
+    "kind": "boundary",
+    "condition": "Có 99 điểm thì không đổi được"
+   },
+   {
+    "id": "D6",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Điểm hết hạn sau 12 tháng kể từ ngày tích"
+   },
+   {
+    "id": "D7",
+    "uc": 4,
+    "kind": "boundary",
+    "condition": "1.000 điểm chưa lên hạng Vàng, 1.001 điểm thì lên"
+   },
+   {
+    "id": "D8",
+    "uc": 4,
+    "kind": "negative",
+    "condition": "Mâu thuẫn thời hạn điểm (12 tháng ở UC-3, 6 tháng ở UC-4) được phát hiện hoặc kiểm tra"
    }
   ]
  }

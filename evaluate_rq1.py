@@ -153,11 +153,13 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default="rq1_results.json")
     ap.add_argument("--sample", default="rq1_judge_sample.csv")
     ap.add_argument("--kappa", help="CSV đã chấm tay -> in kappa rồi thoát")
+    ap.add_argument("--only", default="", help="chỉ chạy tài liệu có đường dẫn bắt đầu bằng chuỗi này, vd cases/heldout/")
     args = ap.parse_args(argv)
     if args.kappa:
         return kappa_report(args.kappa)
 
-    gold_all = json.loads((ROOT / "test_conditions.json").read_text(encoding="utf-8"))["cases"]
+    gold_all = {k: v for k, v in json.loads((ROOT / "test_conditions.json").read_text(encoding="utf-8"))["cases"].items()
+                if k.startswith(args.only)}
     client, model = resolve_client(args.profile, False, TestCaseDraft())
     rows = {"direct": [], "pipeline": []}
     for doc, gold in gold_all.items():
