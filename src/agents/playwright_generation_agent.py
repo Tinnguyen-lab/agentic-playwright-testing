@@ -28,7 +28,7 @@ QUY TẮC:
     `role_name` là TÊN HIỂN THỊ. VD nút chữ "Login" -> value="button", role_name="Login"
     (KHÔNG phải value="Login").
   * strategy=placeholder/label/text/test_id/css: `value` là chuỗi locator; để `role_name` trống.
-  * fill: `arg` = giá trị nhập.  expect_url: `arg` = URL kỳ vọng.
+  * goto: `arg` = URL (KHÔNG đặt URL vào `value`).  fill: `arg` = giá trị nhập.  expect_url: `arg` = URL kỳ vọng.
     expect_text: `value` = locator phần tử chứa văn bản (thường strategy=text với value là 1 phần
     của thông báo, hoặc test_id), `arg` = đoạn text kỳ vọng.
 - ƯU TIÊN role/label/placeholder/text/test_id; hạn chế css.
@@ -124,8 +124,9 @@ class PlaywrightGenerationAgent:
         self._llm = llm
         self._model_name = model_name
 
-    def plan(self, test_case: TestCase, target_url: str) -> PlaywrightPlan:
-        user_prompt = self._build_user_prompt(test_case, target_url)
+    def plan(self, test_case: TestCase, target_url: str, page_context: str | None = None) -> PlaywrightPlan:
+        """page_context: aria snapshot trang đích (RQ2 nhánh DOM-aware); None = baseline chỉ có test case."""
+        user_prompt = self._build_user_prompt(test_case, target_url, page_context)
         plan = self._llm.structured_completion(SYSTEM_PROMPT, user_prompt, PlaywrightPlan)
         return plan.model_copy(update={"test_case_id": test_case.id, "target_url": target_url})
 
@@ -135,12 +136,19 @@ class PlaywrightGenerationAgent:
         return GeneratedScript(test_case_id=test_case.id, code=render_script(plan, screenshot), grounding=grounding)
 
     @staticmethod
-    def _build_user_prompt(test_case: TestCase, target_url: str) -> str:
+    def _build_user_prompt(test_case: TestCase, target_url: str, page_context: str | None = None) -> str:
         steps = "\n".join(f"  - {s.action} => {s.expected or '—'}" for s in test_case.steps)
-        return (
+        prompt = (
             f"Website đích: {target_url}\n"
             f"Test case: {test_case.title} (loại {test_case.type.value})\n"
             f"Precondition: {', '.join(test_case.preconditions) or '—'}\n"
             f"Steps:\n{steps or '  —'}\n"
             f"Expected result: {test_case.expected_result or '—'}"
         )
+        if page_context:
+            prompt += (
+                "\n\nAccessibility snapshot trang đích lúc vừa mở (YAML aria). Với phần tử có trong đây, "
+                "chỉ dùng role/name đúng như snapshot; phần tử xuất hiện sau điều hướng thì suy luận như thường:\n"
+                f"{page_context}"
+            )
+        return prompt

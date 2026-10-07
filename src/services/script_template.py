@@ -9,10 +9,11 @@ _SKELETON = jinja2.Template(
     """\
 from playwright.sync_api import sync_playwright, expect
 
+expect.set_options(timeout=10_000)  # trang demo có phần tử chờ ~5s (dynamic_loading)
 
 def run():
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.chromium.launch(args=["--disable-http2"])  # HTTP/2 tới heroku bị treo ở một số mạng
         page = browser.new_page()
         {{ body }}
         page.screenshot(path="{{ screenshot }}")

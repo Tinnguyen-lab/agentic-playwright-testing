@@ -38,3 +38,10 @@ def test_generate_offline_no_grounding():
     assert script.test_case_id == "TC"
     assert "sync_playwright" in script.code
     assert script.grounding == []
+
+
+def test_prompt_includes_aria_snapshot_only_when_given():
+    tc = TestCase(id="TC", title="login", type=TestType.POSITIVE)
+    with_ctx = PlaywrightGenerationAgent._build_user_prompt(tc, "u", '- button "Login"')
+    assert '- button "Login"' in with_ctx and "Accessibility snapshot" in with_ctx
+    assert "Accessibility snapshot" not in PlaywrightGenerationAgent._build_user_prompt(tc, "u")
