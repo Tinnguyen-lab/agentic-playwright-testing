@@ -1,0 +1,533 @@
+{
+ "_note": "Điều kiện kiểm thử gold cho RQ1 (độ phủ test case). Mỗi điều kiện là một hành vi kiểm thử được rút từ tài liệu như đang viết; boundary = giá trị tại hoặc ngay ngoài biên. Claude soạn nháp, nhóm review.",
+ "cases": {
+  "cases/auth.md": [
+   {
+    "id": "A1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Email và mật khẩu hợp lệ thì đăng nhập được và chuyển tới trang chủ"
+   },
+   {
+    "id": "A2",
+    "uc": 1,
+    "kind": "negative",
+    "condition": "Email hoặc mật khẩu sai thì hiển thị lỗi và không cho vào"
+   },
+   {
+    "id": "A3",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Đổi mật khẩu thành công thì hệ thống gửi email xác nhận"
+   },
+   {
+    "id": "A4",
+    "uc": 3,
+    "kind": "negative",
+    "condition": "Đăng nhập sai nhiều lần thì tài khoản bị khoá và người dùng được thông báo"
+   }
+  ],
+  "cases/booking.md": [
+   {
+    "id": "B1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Tìm chuyến thì hiển thị các chuyến phù hợp"
+   },
+   {
+    "id": "B2",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Người dùng đã đăng nhập chọn chuyến và xác nhận thì được giữ chỗ và nhận mã đặt chỗ"
+   },
+   {
+    "id": "B3",
+    "uc": 2,
+    "kind": "negative",
+    "condition": "Người dùng chưa đăng nhập thì không đặt chỗ được"
+   },
+   {
+    "id": "B4",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Huỷ đặt chỗ trước giờ khởi hành thì huỷ được"
+   },
+   {
+    "id": "B5",
+    "uc": 3,
+    "kind": "negative",
+    "condition": "Huỷ đặt chỗ sau giờ khởi hành thì không được"
+   },
+   {
+    "id": "B6",
+    "uc": 4,
+    "kind": "positive",
+    "condition": "Người dùng gửi được yêu cầu hoàn tiền"
+   }
+  ],
+  "cases/cart.md": [
+   {
+    "id": "C1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Nhấn nút Thêm vào giỏ thì thao tác thêm sản phẩm được thực hiện"
+   },
+   {
+    "id": "C2",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Thanh toán giỏ hàng thì tạo đơn và gửi email xác nhận"
+   },
+   {
+    "id": "C3",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Đơn hàng đã đặt được hệ thống xử lý"
+   }
+  ],
+  "cases/profile.md": [
+   {
+    "id": "P1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Người dùng đã đăng nhập xem được tên, email và số điện thoại của mình"
+   },
+   {
+    "id": "P2",
+    "uc": 1,
+    "kind": "negative",
+    "condition": "Người dùng chưa đăng nhập thì không xem được hồ sơ"
+   },
+   {
+    "id": "P3",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Cập nhật được thông tin cá nhân"
+   }
+  ],
+  "cases/search.md": [
+   {
+    "id": "S1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Nhập từ khoá thì hiển thị kết quả khớp"
+   },
+   {
+    "id": "S2",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Có hơn 10 kết quả thì mỗi trang hiển thị tối đa 10"
+   },
+   {
+    "id": "S3",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Thời gian phản hồi của tìm kiếm được kiểm tra"
+   },
+   {
+    "id": "S4",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Xem được tất cả kết quả khớp trên một trang"
+   }
+  ],
+  "cases/library.md": [
+   {
+    "id": "L1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Thành viên đang mượn dưới 5 cuốn thì mượn thêm được"
+   },
+   {
+    "id": "L2",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Đang mượn 4 cuốn thì mượn cuốn thứ 5 thành công"
+   },
+   {
+    "id": "L3",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Đã mượn 5 cuốn thì lượt mượn mới bị từ chối với 'Đã đạt giới hạn mượn'"
+   },
+   {
+    "id": "L4",
+    "uc": 1,
+    "kind": "negative",
+    "condition": "Chưa đăng nhập thì không mượn được"
+   },
+   {
+    "id": "L5",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Gia hạn lần đầu thì hạn trả cộng thêm 7 ngày"
+   },
+   {
+    "id": "L6",
+    "uc": 2,
+    "kind": "negative",
+    "condition": "Gia hạn lần thứ hai cùng một cuốn thì bị từ chối"
+   },
+   {
+    "id": "L7",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Trả sách sau hạn thì có tính phí"
+   }
+  ],
+  "cases/transfer.md": [
+   {
+    "id": "T1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Chuyển số tiền trong khoảng 10.000–50.000.000 thì thành công"
+   },
+   {
+    "id": "T2",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Chuyển đúng 10.000 hoặc đúng 50.000.000 thì được chấp nhận"
+   },
+   {
+    "id": "T3",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Chuyển 9.999 hoặc 50.000.001 thì bị từ chối với 'Số tiền không hợp lệ'"
+   },
+   {
+    "id": "T4",
+    "uc": 1,
+    "kind": "negative",
+    "condition": "Chưa đăng nhập thì không chuyển được"
+   },
+   {
+    "id": "T5",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Nhập đúng OTP thì giao dịch được thực hiện"
+   },
+   {
+    "id": "T6",
+    "uc": 2,
+    "kind": "boundary",
+    "condition": "Nhập sai OTP 3 lần thì giao dịch bị huỷ (sai dưới 3 lần thì chưa huỷ)"
+   },
+   {
+    "id": "T7",
+    "uc": 3,
+    "kind": "boundary",
+    "condition": "Tổng chuyển trong ngày vượt 100.000.000 thì không được chuyển thêm"
+   }
+  ],
+  "cases/course.md": [
+   {
+    "id": "K1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Đăng ký trong thời gian mở đăng ký thì lưu được"
+   },
+   {
+    "id": "K2",
+    "uc": 1,
+    "kind": "negative",
+    "condition": "Ngoài thời gian mở đăng ký thì không đăng ký được"
+   },
+   {
+    "id": "K3",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Tổng 14 hoặc 24 tín chỉ thì lưu được"
+   },
+   {
+    "id": "K4",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Tổng 13 hoặc 25 tín chỉ thì không lưu được và báo lỗi"
+   },
+   {
+    "id": "K5",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Huỷ được học phần đã đăng ký"
+   },
+   {
+    "id": "K6",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Đăng ký vào lớp đã đủ sĩ số thì được đưa vào danh sách chờ"
+   }
+  ],
+  "cases/inventory.md": [
+   {
+    "id": "I1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Nhập số lượng hợp lệ thì tồn kho tăng tương ứng"
+   },
+   {
+    "id": "I2",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Nhập đúng 1 hoặc 10.000 đơn vị thì được chấp nhận"
+   },
+   {
+    "id": "I3",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Nhập 0 hoặc 10.001 đơn vị thì bị từ chối"
+   },
+   {
+    "id": "I4",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Tồn kho xuống thấp thì có cảnh báo"
+   },
+   {
+    "id": "I5",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Xuất kho không vượt tồn thì thành công và tồn giảm tương ứng"
+   },
+   {
+    "id": "I6",
+    "uc": 3,
+    "kind": "negative",
+    "condition": "Xuất quá số lượng tồn thì không được xuất"
+   }
+  ],
+  "cases/restaurant.md": [
+   {
+    "id": "R1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Đặt bàn hợp lệ thì được xác nhận và nhận tin nhắn xác nhận"
+   },
+   {
+    "id": "R2",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Đặt cho 1 người hoặc số người tối đa thì được chấp nhận"
+   },
+   {
+    "id": "R3",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Đặt cho 0 người hoặc vượt số người tối đa thì bị từ chối"
+   },
+   {
+    "id": "R4",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Khách đổi được giờ đặt bàn"
+   },
+   {
+    "id": "R5",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Khách đến trễ quá ngưỡng thì đặt bàn bị huỷ"
+   },
+   {
+    "id": "R6",
+    "uc": 4,
+    "kind": "negative",
+    "condition": "Mâu thuẫn giới hạn số khách (20 ở UC-1, 10 ở UC-4) được phát hiện hoặc kiểm tra"
+   }
+  ],
+  "cases/wallet.md": [
+   {
+    "id": "W1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Nạp trong khoảng hợp lệ thì số dư tăng và hiển thị 'Nạp tiền thành công'"
+   },
+   {
+    "id": "W2",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Nạp đúng 50.000 hoặc đúng 20.000.000 thì được chấp nhận"
+   },
+   {
+    "id": "W3",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Nạp 49.999 hoặc 20.000.001 thì bị từ chối"
+   },
+   {
+    "id": "W4",
+    "uc": 1,
+    "kind": "negative",
+    "condition": "Chưa liên kết ngân hàng thì không nạp được"
+   },
+   {
+    "id": "W5",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Rút được tiền từ ví về tài khoản ngân hàng"
+   },
+   {
+    "id": "W6",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Lịch sử hiển thị giao dịch 90 ngày gần nhất, mới nhất ở trên"
+   },
+   {
+    "id": "W7",
+    "uc": 3,
+    "kind": "boundary",
+    "condition": "Giao dịch cũ hơn 90 ngày không hiển thị"
+   }
+  ],
+  "cases/leave.md": [
+   {
+    "id": "V1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Gửi đơn hợp lệ thì đơn được chuyển tới quản lý trực tiếp"
+   },
+   {
+    "id": "V2",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Đơn 0,5 ngày hoặc 12 ngày thì gửi được"
+   },
+   {
+    "id": "V3",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Đơn dưới 0,5 ngày hoặc trên 12 ngày thì bị từ chối"
+   },
+   {
+    "id": "V4",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Quản lý duyệt thì nhân viên nhận thông báo kết quả"
+   },
+   {
+    "id": "V5",
+    "uc": 2,
+    "kind": "negative",
+    "condition": "Quản lý từ chối thì nhân viên nhận thông báo kết quả"
+   },
+   {
+    "id": "V6",
+    "uc": 3,
+    "kind": "negative",
+    "condition": "Xin nghỉ quá số ngày phép còn lại thì không được"
+   }
+  ],
+  "cases/social.md": [
+   {
+    "id": "O1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Đăng bài hợp lệ thì bài hiển thị ở đầu bảng tin"
+   },
+   {
+    "id": "O2",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Bài dài 1 hoặc 2.000 ký tự thì đăng được"
+   },
+   {
+    "id": "O3",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Bài rỗng hoặc dài 2.001 ký tự thì không đăng được"
+   },
+   {
+    "id": "O4",
+    "uc": 1,
+    "kind": "negative",
+    "condition": "Chưa đăng nhập thì không đăng bài được"
+   },
+   {
+    "id": "O5",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Đính kèm được ảnh vào bài viết"
+   },
+   {
+    "id": "O6",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Bài viết bị báo cáo được đưa vào xem xét"
+   }
+  ],
+  "cases/coupon.md": [
+   {
+    "id": "Q1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Mã hợp lệ thì tổng tiền giảm 10%"
+   },
+   {
+    "id": "Q2",
+    "uc": 1,
+    "kind": "negative",
+    "condition": "Mã hết hạn thì hiển thị 'Mã đã hết hạn' và không giảm"
+   },
+   {
+    "id": "Q3",
+    "uc": 2,
+    "kind": "boundary",
+    "condition": "Đơn đúng 200.000 đồng thì áp mã được"
+   },
+   {
+    "id": "Q4",
+    "uc": 2,
+    "kind": "boundary",
+    "condition": "Đơn 199.999 đồng thì không áp mã được"
+   },
+   {
+    "id": "Q5",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Khách nhập thông tin và nhận được ưu đãi thành viên"
+   }
+  ],
+  "cases/ticket.md": [
+   {
+    "id": "X1",
+    "uc": 1,
+    "kind": "positive",
+    "condition": "Tạo ticket hợp lệ thì có mã ticket và email xác nhận"
+   },
+   {
+    "id": "X2",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Tiêu đề 5 ký tự hoặc độ dài tối đa thì tạo được"
+   },
+   {
+    "id": "X3",
+    "uc": 1,
+    "kind": "boundary",
+    "condition": "Tiêu đề 4 ký tự hoặc vượt độ dài tối đa thì không tạo được"
+   },
+   {
+    "id": "X4",
+    "uc": 1,
+    "kind": "negative",
+    "condition": "Chưa đăng nhập thì không tạo ticket được"
+   },
+   {
+    "id": "X5",
+    "uc": 2,
+    "kind": "positive",
+    "condition": "Nhân viên phản hồi được ticket"
+   },
+   {
+    "id": "X6",
+    "uc": 3,
+    "kind": "positive",
+    "condition": "Đóng ticket đã giải quyết thì chuyển sang 'Đã đóng'"
+   },
+   {
+    "id": "X7",
+    "uc": 4,
+    "kind": "negative",
+    "condition": "Mâu thuẫn độ dài tiêu đề (100 ở UC-1, 50 ở UC-4) được phát hiện hoặc kiểm tra"
+   }
+  ]
+ }
+}

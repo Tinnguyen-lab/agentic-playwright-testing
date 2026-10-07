@@ -45,3 +45,25 @@ def test_prompt_includes_aria_snapshot_only_when_given():
     with_ctx = PlaywrightGenerationAgent._build_user_prompt(tc, "u", '- button "Login"')
     assert '- button "Login"' in with_ctx and "Accessibility snapshot" in with_ctx
     assert "Accessibility snapshot" not in PlaywrightGenerationAgent._build_user_prompt(tc, "u")
+
+
+def test_nth_renders_and_counts_as_locator_change():
+    from src.services.repair_policy import classify_change
+    from src.services.script_template import render_script
+    a = PlaywrightAction(type=ActionType.CLICK, strategy=LocatorStrategy.ROLE, value="button", role_name="Add to cart")
+    b = a.model_copy(update={"nth": 1})
+    assert 'name="Add to cart").nth(1).click()' in render_script(PlaywrightPlan(actions=[b]))
+    assert ".nth(" not in render_script(PlaywrightPlan(actions=[a]))
+    assert classify_change(PlaywrightPlan(actions=[a]), PlaywrightPlan(actions=[b]))[2] == ["locator_changed"]
+
+
+def test_grounding_feedback_lists_only_bad_locators():
+    from src.agents.playwright_generation_agent import grounding_feedback
+    from src.models.playwright_artifacts import GroundingRecord
+    plan = _plan()
+    ok = [GroundingRecord(action_index=1, strategy="placeholder", value="Username", matched_count=1, ok=True)]
+    assert grounding_feedback(plan, ok) is None
+    bad = [GroundingRecord(action_index=1, strategy="placeholder", value="Username", matched_count=3, ok=False,
+                           snapshot='- textbox "Username"')]
+    fb = grounding_feedback(plan, bad)
+    assert "action #1" in fb and "khớp 3 phần tử" in fb and '- textbox "Username"' in fb

@@ -15,6 +15,8 @@ def run():
     with sync_playwright() as p:
         browser = p.chromium.launch(args=["--disable-http2"])  # HTTP/2 tới heroku bị treo ở một số mạng
         page = browser.new_page()
+        page.set_default_timeout(10_000)  # thao tác (click/fill); điều hướng giữ 30s
+        page.set_default_navigation_timeout(30_000)
         {{ body }}
         page.screenshot(path="{{ screenshot }}")
         browser.close()
@@ -28,6 +30,11 @@ if __name__ == "__main__":
 
 
 def _locator_expr(action) -> str:
+    base = _base_locator_expr(action)
+    return f"{base}.nth({action.nth})" if action.nth >= 0 else base
+
+
+def _base_locator_expr(action) -> str:
     s = action.strategy
     if s == LocatorStrategy.ROLE:
         return f'page.get_by_role("{action.value}", name="{action.role_name}")'

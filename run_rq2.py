@@ -12,13 +12,16 @@ Nhánh `aria`: chụp aria snapshot trang đích đưa vào prompt (RQ2: DOM có
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 from collections import defaultdict
 from pathlib import Path
 
+from playwright.sync_api import sync_playwright
+
 from src.agents.execution_agent import ExecutionAgent
-from src.agents.playwright_generation_agent import PlaywrightGenerationAgent
+from src.agents.playwright_generation_agent import PlaywrightGenerationAgent, ground_flow, grounding_feedback
 from src.models.playwright_artifacts import (
     ActionType, GeneratedScript, LocatorStrategy, PlaywrightAction, PlaywrightPlan,
 )
@@ -40,7 +43,6 @@ def _error_line(stderr: str) -> str:
 
 def _aria_snapshots(urls) -> dict[str, str]:
     """Mở mỗi URL một lần, lấy aria snapshot của <body> (lỗi -> chuỗi rỗng = như baseline)."""
-    from playwright.sync_api import sync_playwright
     out = {}
     with sync_playwright() as p:
         browser = p.chromium.launch(args=["--disable-http2"])  # giống script_template
@@ -80,6 +82,28 @@ def _mock_plan() -> PlaywrightPlan:
     ])
 
 
+def _ground_and_refine(agent, browser, tc, url, ctx, plan):
+    """Grounding plan trên trang thật; có locator khớp != 1 thì phản hồi cho LLM sinh lại đúng 1 lần."""
+    page_ctx = browser.new_context()
+    try:
+        records = ground_flow(page_ctx.new_page(), plan.actions, snapshot_chars=SNAPSHOT_CHARS)
+    except Exception:  # trang không tải được -> giữ plan, không phản hồi
+        records = []
+    finally:
+        page_ctx.close()
+    feedback = grounding_feedback(plan, records)
+    if feedback is None:
+        return plan, False
+    return agent.plan(tc, url, page_context=ctx, feedback=feedback), True
+
+
+def _paired(rx, ry, x, y):
+    a = {r["id"]: r["status"] == "passed" for r in rx["cases"]}
+    b = {r["id"]: r["status"] == "passed" for r in ry["cases"]}
+    return {"both_pass": sum(a[i] and b[i] for i in a), "both_fail": sum(not a[i] and not b[i] for i in a),
+            f"{y}_only": sum(b[i] and not a[i] for i in a), f"{x}_only": sum(a[i] and not b[i] for i in a)}
+
+
 def main(argv: list[str] | None = None) -> int:
     try:
         sys.stdout.reconfigure(encoding="utf-8")
@@ -91,9 +115,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--mock", action="store_true", help="Offline smoke (plan dựng sẵn)")
     ap.add_argument("--catalog", default=CATALOG)
     ap.add_argument("--out", default="rq2_results.json")
-    ap.add_argument("--context", choices=["none", "aria", "both", "oracle"], default="none",
-                    help="none = baseline (chỉ test case); aria = kèm aria snapshot trang đích; both = cả hai; "
-                         "oracle = chạy plan viết tay trong catalog (kiểm chứng target, không gọi LLM)")
+    ap.add_argument("--context", choices=["none", "aria", "aria_loop", "both", "all", "oracle"], default="none",
+                    help="none = baseline (chỉ test case); aria = kèm aria snapshot trang đích; aria_loop = aria + "
+                         "grounding trên trang thật, locator khớp != 1 thì phản hồi để LLM sinh lại 1 lần; "
+                         "both = none+aria; all = none+aria+aria_loop; oracle = plan viết tay (không gọi LLM)")
     args = ap.parse_args(argv)
 
     client, model = resolve_client(args.profile, args.mock, _mock_plan())
@@ -102,21 +127,26 @@ def main(argv: list[str] | None = None) -> int:
     WORKDIR.mkdir(parents=True, exist_ok=True)
 
     targets = _load_targets(args.catalog)
-    conditions = ["none", "aria"] if args.context == "both" else [args.context]
-    snaps = _aria_snapshots([t[1] for t in targets]) if "aria" in conditions else {}
+    conditions = {"both": ["none", "aria"], "all": ["none", "aria", "aria_loop"]}.get(args.context, [args.context])
+    snaps = _aria_snapshots([t[1] for t in targets]) if {"aria", "aria_loop"} & set(conditions) else {}
     print(f"[i] {len(targets)} target | model={model} | context={conditions}")
 
+    stack = contextlib.ExitStack()
+    browser = (stack.enter_context(sync_playwright()).chromium.launch(args=["--disable-http2"])
+               if "aria_loop" in conditions else None)
     results = {}
     for cond in conditions:
         print(f"\n### context={cond}")
         by_site = defaultdict(lambda: [0, 0])
         rows = []
         for site, url, tc, oracle in targets:
-            ctx = snaps.get(url) if cond == "aria" else None
-            infra_retry = False
+            ctx = snaps.get(url) if cond in ("aria", "aria_loop") else None
+            infra_retry = refined = False
             try:
                 plan = (PlaywrightPlan(actions=oracle) if cond == "oracle"  # cận trên: target khả thi?
                         else agent.plan(tc, url, page_context=ctx))
+                if cond == "aria_loop":
+                    plan, refined = _ground_and_refine(agent, browser, tc, url, ctx, plan)
                 script = GeneratedScript(test_case_id=tc.id, code=render_script(plan, screenshot=f"{tc.id}.png"))
                 result = executor.run(script, WORKDIR / cond)
                 if result.status.value != "passed" and INFRA_HANG in result.stderr:
@@ -130,7 +160,7 @@ def main(argv: list[str] | None = None) -> int:
             by_site[site][0] += ok
             by_site[site][1] += 1
             rows.append({"id": tc.id, "site": site, "url": url, "type": tc.type.value, "status": status, "error": err,
-                         "infra_retry": infra_retry})
+                         "infra_retry": infra_retry, "refined": refined})
             print(f"  [{tc.id:6}] {site:24} {status.upper():7} {err[:90]}")
         n, passed = len(rows), sum(r["status"] == "passed" for r in rows)
         results[cond] = {"n": n, "passed": passed, "first_run_pass_rate": passed / n if n else 0.0,
@@ -145,15 +175,15 @@ def main(argv: list[str] | None = None) -> int:
         r = results[c]
         print(f"=== RQ2 [{c}] first-run pass rate: {r['passed']}/{r['n']} = {r['first_run_pass_rate']:.0%} | model={model} ===")
 
+    stack.close()
     out = {"model": model, "conditions": results}
-    if len(conditions) == 2:  # cặp trên cùng target -> dữ liệu cho McNemar
-        a = {r["id"]: r["status"] == "passed" for r in results["none"]["cases"]}
-        b = {r["id"]: r["status"] == "passed" for r in results["aria"]["cases"]}
-        out["paired"] = {
-            "both_pass": sum(a[i] and b[i] for i in a), "both_fail": sum(not a[i] and not b[i] for i in a),
-            "aria_only": sum(b[i] and not a[i] for i in a), "none_only": sum(a[i] and not b[i] for i in a),
-        }
-        print(f"[i] Paired: {out['paired']}")
+    # cặp trên cùng target -> dữ liệu cho McNemar; "paired" giữ dạng cũ (none vs aria) cho báo cáo
+    pairs = {f"{x}__{y}": _paired(results[x], results[y], x, y)
+             for i, x in enumerate(conditions) for y in conditions[i + 1:]}
+    if pairs:
+        out["paired_all"] = pairs
+        out["paired"] = pairs.get("none__aria") or next(iter(pairs.values()))
+        print(f"[i] Paired: {pairs}")
     Path(args.out).write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[✓] JSON: {args.out}")
     return 0

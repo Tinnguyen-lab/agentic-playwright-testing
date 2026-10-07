@@ -49,3 +49,4 @@ class RepairProposal(BaseModel):
     evidence: list[str] = Field(default_factory=list)
     requires_approval: bool = True
     outcome: RepairOutcome = RepairOutcome.PROPOSED
+    new_plan: PlaywrightPlan | None = None  # plan sẽ được áp dụng NẾU người duyệt đồng ý
