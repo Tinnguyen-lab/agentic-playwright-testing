@@ -788,6 +788,26 @@ def references_and_appendix(r: Report, cat):
             [[doc.removeprefix("cases/").removesuffix(".md"), g["id"], str(g["uc"]), g["kind"], g["condition"]]
              for doc, gs in gold.items() for g in gs], [2.3, 1.2, 1.1, 2, 9.4], center_cols=(1, 2, 3))
 
+    r.h1("PHỤ LỤC D: HƯỚNG DẪN CHẠY LẠI")
+    r.chapter, r.n_table = "D", 0
+    r.p("Cài đặt: pip install -r requirements.txt rồi python -m playwright install chromium. Cấu hình LLM trong .env (local) "
+        "và .env.cloud (DeepSeek), xem .env.example; hai file này không được commit. Mọi lệnh chạy ở thư mục gốc dự án.",
+        align=WD_ALIGN_PARAGRAPH.LEFT)
+    r.table("Lệnh tái lập các số liệu trong báo cáo", ["Mục", "Lệnh"], [
+        ["Unit test", "python -m pytest tests/unit -q"],
+        ["Giao diện", "streamlit run src/ui/app.py"],
+        ["ShopLab", "python apps/shoplab/app.py --variant v0 --port 5100"],
+        ["RQ1 phát hiện mơ hồ", "python evaluate_agent.py --profile cloud"],
+        ["RQ1 chất lượng test case", "python evaluate_rq1.py --profile cloud --out rq1_results_v2.json"],
+        ["RQ1 kappa", "python evaluate_rq1.py --kappa rq1_judge_sample_v2.csv"],
+        ["RQ2 kiểm catalog", "python run_rq2.py --context oracle"],
+        ["RQ2 lần đo đầu", "python run_rq2.py --profile cloud --context both --out rq2_results_both.json"],
+        ["RQ2 bản 2", "python run_rq2.py --profile cloud --context all --out rq2_v2_r1.json (lặp r2, r3)"],
+        ["RQ3 kiểm suite", "python run_rq3.py --check"],
+        ["RQ3 ba nhánh", "python run_rq3.py --profile cloud --out rq3_results_v2.json"],
+        ["RQ4", "python tools/rq4/rq4.py timer | export | check | analyze (xem rq4-protocol.md)"],
+    ], [4.5, 11.5])
+
 
 import notes_ext  # noqa: E402  (nhận xét viết sau khi có kết quả thật)
 from chapters_ext import load as ext_load  # noqa: E402
