@@ -130,7 +130,7 @@ def propose_repair(tc: TestCase) -> None:
     else:
         client, model = _client(RepairDraft(new_plan=plan))
         proposal = RepairAgent(client, model).propose(plan, result, tc, attempt,
-                                                      page_context=f"{probe.get('note', '')}\n{probe.get('snapshot', '')}")
+                                                      page_context=probe.get("evidence", ""))
     store.save_repair(pid, proposal, run.id)
     log("propose_repair", tc=tc.id, risk=proposal.risk_level.value, kinds=proposal.changed_kinds)
 

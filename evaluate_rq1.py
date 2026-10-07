@@ -39,6 +39,8 @@ QUY TẮC BẮT BUỘC:
 - Sinh test case theo các loại KHI CÓ CĂN CỨ: positive, negative, boundary, error_guessing, alternative_flow.
 - Mỗi test case gồm: title, type, preconditions, steps (mỗi step có action và expected), expected_result.
 - KHÔNG tạo expected_result vượt quá phạm vi tài liệu.
+- negative / error_guessing / alternative_flow: CHỈ sinh khi tài liệu NÊU hệ thống phản ứng thế nào trong trường hợp
+  đó. Tài liệu không nói thì KHÔNG tự đặt kết quả mong đợi — bỏ qua case đó.
 - KHÔNG gán ID.
 
 Trả về JSON gồm: test_cases[].\
@@ -70,10 +72,12 @@ def gen_direct(client, text: str) -> list[TestCase]:
     return client.structured_completion(DIRECT_PROMPT, f"Tài liệu yêu cầu:\n\n{text}", TestCaseDraft).test_cases
 
 
-def gen_pipeline(client, model: str, text: str, name: str) -> list[TestCase]:
+def gen_pipeline(client, model: str, text: str, name: str) -> tuple[list[TestCase], set[str]]:
+    """Trả (test case, ID các yêu cầu bị Requirement Agent gắn cờ mơ hồ — sẽ bị chặn ở AG-01 nếu người duyệt từ chối)."""
     analysis = RequirementAnalysisAgent(client, model_name=model).analyze(text, source_name=name)
     designer = TestDesignAgent(client, model_name=model)
-    return [tc for req in analysis.requirements for tc in designer.design(req).test_cases]
+    flagged = {r.id for r in analysis.requirements if r.is_ambiguous}
+    return [tc for req in analysis.requirements for tc in designer.design(req).test_cases], flagged
 
 
 def _tc_line(i: int, tc: TestCase) -> str:
@@ -94,7 +98,7 @@ def judge(client, text: str, gold: list[dict], tcs: list[TestCase]) -> list[Judg
             for i in range(len(tcs))]
 
 
-def score(rows: list[dict], gold_all: dict[str, list[dict]]) -> dict:
+def score(rows: list[dict], gold_all: dict[str, list[dict]], gated: bool = True) -> dict:
     """rows: [{doc, tc (dict), judgement (dict)}] của một nhánh."""
     covered = defaultdict(set)
     for r in rows:
@@ -115,6 +119,9 @@ def score(rows: list[dict], gold_all: dict[str, list[dict]]) -> dict:
         "no_gold_match": sum(not r["judgement"]["covers"] for r in rows),
         "traceable": sum(bool(r["tc"].get("requirement_id")) for r in rows),
         "boundary_tc": sum(r["tc"]["type"] == "boundary" for r in rows),
+        # mô phỏng cổng AG-01: yêu cầu bị gắn cờ mơ hồ được giữ lại để làm rõ, chưa sinh test
+        **({"gated": score([r for r in rows if not r.get("req_flagged")], gold_all, gated=False)}
+           if gated and any(r.get("req_flagged") for r in rows) else {}),
     }
 
 
@@ -156,16 +163,19 @@ def main(argv=None) -> int:
     for doc, gold in gold_all.items():
         text = load_document(ROOT / doc).text
         for arm in rows:
-            tcs = gen_direct(client, text) if arm == "direct" else gen_pipeline(client, model, text, doc)
+            tcs, flagged = (gen_direct(client, text), set()) if arm == "direct" else gen_pipeline(client, model, text, doc)
             js = judge(client, text, gold, tcs)
-            rows[arm] += [{"doc": doc, "tc": tc.model_dump(mode="json"), "judgement": j.model_dump()} for tc, j in zip(tcs, js)]
+            rows[arm] += [{"doc": doc, "tc": tc.model_dump(mode="json"), "judgement": j.model_dump(),
+                           "req_flagged": tc.requirement_id in flagged} for tc, j in zip(tcs, js)]
             cov = len({c for j in js for c in j.covers})
             print(f"  {doc:22} {arm:9} {len(tcs):3} TC | phủ {cov}/{len(gold)} | unsupported {sum(not j.supported for j in js)}")
 
     summary = {arm: score(r, gold_all) for arm, r in rows.items()}
     for arm, s in summary.items():
         print(f"=== {arm:9} {s['n_tc']} TC | độ phủ {s['covered']}/{s['n_gold']} = {s['coverage']:.0%} "
-              f"| unsupported {s['unsupported_rate']:.0%} | truy vết {s['traceable']}/{s['n_tc']} | boundary {s['boundary_tc']}")
+              f"| unsupported {s['unsupported_rate']:.0%} | truy vết {s['traceable']}/{s['n_tc']} | boundary {s['boundary_tc']}"
+              + (f" | có AG-01: {s['gated']['n_tc']} TC, phủ {s['gated']['coverage']:.0%}, "
+                 f"unsupported {s['gated']['unsupported_rate']:.0%}" if "gated" in s else ""))
     Path(args.out).write_text(json.dumps({"model": model, "summary": summary, "rows": rows}, ensure_ascii=False, indent=2),
                               encoding="utf-8")
 

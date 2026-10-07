@@ -32,7 +32,7 @@ from src.agents.execution_agent import ExecutionAgent
 from src.agents.repair_agent import RepairAgent
 from src.models.playwright_artifacts import GeneratedScript, PlaywrightPlan
 from src.models.repair import RepairDraft, RepairOutcome, RiskLevel
-from src.services.browser_tasks import probe, try_heal
+from src.services.browser_tasks import heal_all, probe
 from src.services.script_template import render_script
 from src.utils.cli import resolve_client
 
@@ -75,17 +75,19 @@ def repair_case(arm, tc, plan, result, browser, executor, agents, name):
     applied_kinds: set[str] = set()
     current, outcome, last_risk = plan, "unrepaired", None
     for attempt in range(1, BUDGET + 1):
-        page, idx, note, snap = probe(browser, current)
         proposal = None
         if arm in ("heal", "constrained"):
-            healed = try_heal(page, current, idx)
+            healed, evidence = heal_all(browser, current)  # chữa theo lô mọi locator gãy
             if healed:
                 proposal = RepairAgent(model_name="self-healing").propose_with_healing(current, healed, result, tc, attempt, BUDGET)
-        page.context.close()
+        else:
+            page, _, note, snap = probe(browser, current)
+            page.context.close()
+            evidence = f"{note}\n{snap}"
         if proposal is None and arm != "heal":
             agent = agents[arm]
             try:
-                proposal = agent.propose(current, result, tc, attempt, BUDGET, page_context=f"{note}\n{snap}")
+                proposal = agent.propose(current, result, tc, attempt, BUDGET, page_context=evidence)
             except Exception as e:
                 return {"outcome": "unrepaired", "attempts": attempt, "kinds": sorted(applied_kinds), "note": f"LLM lỗi: {e}"[:200]}
         if proposal is None:

@@ -44,7 +44,7 @@ def _descriptors(el, is_fill: bool) -> dict:
         "testid": el.get_attribute("data-test") or el.get_attribute("data-testid"),
         "id": el.get_attribute("id"),
         "name": el.get_attribute("name"),
-        "text": "" if is_fill else (el.inner_text() or "").strip(),
+        "text": "" if is_fill else (el.inner_text() or el.get_attribute("value") or "").strip(),
     }
 
 
@@ -56,7 +56,8 @@ def _similarity(target: str, desc: dict) -> float:
 def propose_candidates(page, failed_action: PlaywrightAction) -> list[dict]:
     """LIVE: chọn ĐÚNG element có ý định ban đầu (khớp mờ với locator lỗi) rồi sinh candidate đa strategy."""
     is_fill = failed_action.type == ActionType.FILL
-    selector, role = ("input, textarea", "textbox") if is_fill else ("button, a, [role=button]", "button")
+    selector, role = (("input:not([type=submit]):not([type=button]), textarea", "textbox") if is_fill else
+                      ("button, a, [role=button], input[type=submit], input[type=button]", "button"))
     target = failed_action.role_name or failed_action.value
 
     scored = [(el, _descriptors(el, is_fill)) for el in page.query_selector_all(selector)]

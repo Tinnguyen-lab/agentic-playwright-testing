@@ -19,3 +19,11 @@ def test_score_coverage_union_and_rates():
 def test_cohen_kappa():
     assert cohen_kappa([True, False, True, False], [True, False, True, False]) == 1.0
     assert abs(cohen_kappa([True, True, False, False], [True, False, True, False])) < 1e-9
+
+
+def test_score_gated_drops_flagged_requirements():
+    rows = [dict(_row(["A"], req="REQ-001"), req_flagged=False),
+            dict(_row(["C"], supported=False, req="REQ-002"), req_flagged=True)]
+    s = score(rows, GOLD)
+    assert s["unsupported"] == 1 and s["gated"]["unsupported"] == 0
+    assert s["gated"]["covered"] == 1 and s["covered"] == 2

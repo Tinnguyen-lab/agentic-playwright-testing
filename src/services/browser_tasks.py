@@ -80,6 +80,26 @@ def try_heal(page, plan: PlaywrightPlan, idx) -> dict[int, PlaywrightAction] | N
     return {idx: healed} if healed is not None else None
 
 
+def heal_all(browser, plan: PlaywrightPlan, max_rounds: int = 6):
+    """Chữa theo lô: dò bước hỏng → chữa → dò lại trên plan đã chữa, tới khi hết lỗi chữa được.
+
+    Trả (các action đã chữa theo chỉ số, ghi chú + snapshot tại bước hỏng cuối cùng). Một mutation đổi nhiều locator
+    cùng lúc (vd đổi id cả 3 ô đăng nhập) được chữa trong MỘT đề xuất thay vì tốn nhiều lượt ngân sách.
+    """
+    healed: dict[int, PlaywrightAction] = {}
+    current = plan
+    note, snap = "", ""
+    for _ in range(max_rounds):
+        page, idx, note, snap = probe(browser, current)
+        fix = try_heal(page, current, idx)
+        page.context.close()
+        if not fix:
+            break
+        healed |= fix
+        current = current.model_copy(update={"actions": [fix.get(i, a) for i, a in enumerate(current.actions)]})
+    return healed, f"{note}\n{snap}"
+
+
 # ---------- chạy trong tiến trình con ----------
 def _task(name: str, payload: dict) -> dict:
     with sync_playwright() as p:
@@ -97,10 +117,8 @@ def _task(name: str, payload: dict) -> dict:
                 records = ground_flow(page, plan.actions, snapshot_chars=payload.get("chars", SNAPSHOT_CHARS))
                 return {"records": [r.model_dump() for r in records]}
             if name == "probe_heal":
-                page, idx, note, snap = probe(browser, plan)
-                healed = try_heal(page, plan, idx)
-                return {"index": idx, "note": note, "snapshot": snap,
-                        "healed": {str(k): v.model_dump(mode="json") for k, v in (healed or {}).items()}}
+                healed, evidence = heal_all(browser, plan)
+                return {"evidence": evidence, "healed": {str(k): v.model_dump(mode="json") for k, v in healed.items()}}
             raise ValueError(f"task không hỗ trợ: {name}")
         finally:
             browser.close()
