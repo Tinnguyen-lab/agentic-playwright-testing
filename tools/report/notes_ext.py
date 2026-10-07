@@ -38,7 +38,36 @@ RQ1_TESTGEN = [
     "và không căn cứ cần được đọc như ước lượng của giám khảo LLM.",
 ]
 
-RQ2_V2: list[str] = ["[chờ kết quả RQ2 bản 2]"]
+# Phân loại tay cho phép kiểm assertion rỗng (giải thích trong RQ2_V2):
+EXTRA_TARGET_WEAK = ["PT-04"]  # oracle fail vì timeout nên không kiểm được; trạng thái kỳ vọng = trạng thái ban đầu
+MANUAL_LLM_VACUOUS = {"aria_loop": ["UP-05"]}  # không có bước thao tác; nth(0) trỏ vào thẻ <code> giải thích
+
+RQ2_V2 = [
+    "Ba lần lặp cho kết quả ổn định. Nhánh aria đạt 39–41/50, cao hơn baseline 34–36/50, nhưng ở cả ba lần chênh lệch "
+    "đều không có ý nghĩa thống kê (p từ 0,09 đến 0,27). Nhánh aria_loop đạt 48–50/50, hơn baseline và hơn aria có ý "
+    "nghĩa thống kê ở cả ba lần (p ≤ 0,016), và không làm mất target nào mà aria đạt. Vòng lặp phải sinh lại 8–10 target "
+    "mỗi lần. Như vậy, đưa cây trợ năng vào prompt là chưa đủ: phần tạo ra khác biệt là phản hồi grounding, tức đếm phần "
+    "tử khớp trên trang thật kể cả sau điều hướng, rồi cho LLM sửa đúng chỗ locator khớp 0 hoặc nhiều phần tử.",
+    "Tỉ lệ pass gần 100% buộc phải hỏi thêm: các test pass này có thật sự kiểm hành vi không. Phép kiểm assertion rỗng "
+    "(tools/rq2_vacuity.py) bỏ mọi bước fill và click khỏi script đã pass rồi chạy lại; vẫn pass nghĩa là assertion không "
+    "phụ thuộc vào hành động. Chạy phép kiểm trên chính oracle viết tay cho thấy một số target yếu từ gốc. Ở SD-13 và "
+    "PT-04 (đăng xuất rồi kiểm đang ở trang đăng nhập) và UP-03, trạng thái kỳ vọng trùng với trạng thái ban đầu. Ở PT-02, "
+    "thẻ #error chứa sẵn câu thông báo trong DOM ngay khi tải trang và chỉ được hiện ra bằng CSS, nên mọi assertion bằng "
+    "văn bản đều pass mà không cần bấm Submit. Catalog cần bổ sung assertion phân biệt được trạng thái trước và sau "
+    "(ví dụ kiểm class hiển thị), nằm ngoài DSL hiện tại.",
+    "Trừ các target yếu, phép kiểm tìm ra assertion rỗng do chính LLM gây ra, và chúng tập trung ở nhánh aria_loop. Ở cả "
+    "ba lần, PT-03 dùng get_by_text(\"Your password is invalid!\").nth(0) và nth(0) trỏ vào đoạn hướng dẫn trên trang chứ "
+    "không phải thông báo lỗi. UP-05 không có bước thao tác nên phép kiểm tự động không áp dụng; kiểm tay cho thấy "
+    "get_by_text(\"Welcome UserName!\").nth(0) trỏ vào một thẻ code trong đoạn giải thích. Cả hai đều xuất phát từ cùng "
+    "một cơ chế: khi grounding báo locator khớp nhiều phần tử, LLM chọn cách rẻ nhất là thêm nth để locator khớp đúng "
+    "một, và grounding chỉ đếm số lượng nên chấp nhận. Locator hợp lệ về kỹ thuật nhưng sai về ngữ nghĩa, đúng loại rủi "
+    "ro mà GAP-03 nêu. Sau khi trừ 2 ca này, aria_loop còn 46–48 pass có ý nghĩa mỗi lần, vẫn cao hơn rõ rệt aria "
+    "(39–41) và baseline (33–35, ở hai lần lặp còn script để kiểm).",
+    "Trả lời RQ2: kết hợp yêu cầu với cây trợ năng cải thiện tỉ lệ script chạy đạt ở lần đầu khi cây trợ năng được dùng "
+    "trong một vòng kiểm chứng (68–72% lên 96–100%), còn chỉ đưa vào prompt thì cải thiện chưa đủ chắc chắn. Grounding "
+    "bằng cách đếm phần tử không đủ để bảo đảm locator đúng ngữ nghĩa; cần thêm một tầng kiểm tra như phép kiểm assertion "
+    "rỗng, hoặc cấm nth trên assertion.",
+]
 RQ3 = [
     "Kết quả chính ổn định qua hai lần chạy. Nhánh unconstrained biến 8/17 lỗi nghiệp vụ thật thành test pass (lần đầu "
     "10/17) và làm yếu assertion 18 lần (lần đầu 21). Hai kiểu che lỗi lặp lại đúng như [8] mô tả. Kiểu thứ nhất là sửa "
@@ -87,7 +116,26 @@ THREATS = [
     "Hạ tầng mạng ảnh hưởng tới RQ2 (HTTP/2 tới Heroku); đã kiểm soát bằng --disable-http2 và chạy lại khi treo tải trang.",
 ]
 
-CONCLUSIONS = ["[viết sau khi có đủ kết quả]"]
+CONCLUSIONS = [
+    "Xây dựng được hệ thống chạy trọn luồng từ tài liệu yêu cầu tới script Playwright Python trên website thật: năm agent, "
+    "giao diện Streamlit với các cổng duyệt AG-01..05, lưu version, quyết định duyệt append-only và chuỗi truy vết trong "
+    "DB, kèm ứng dụng đích ShopLab và bộ công cụ thực nghiệm cho cả bốn câu hỏi nghiên cứu.",
+    "RQ1: trên 15 tài liệu và 83 điều kiện gold, cấu trúc hoá yêu cầu không làm tăng độ phủ test case có ý nghĩa thống kê "
+    "so với đưa thẳng tài liệu cho LLM. Lợi ích đo được là truy vết 100% và khả năng chặn yêu cầu mơ hồ ở AG-01, nơi "
+    "phát sinh phần lớn test bịa. Quy tắc sinh test ảnh hưởng tới tỉ lệ test bịa mạnh hơn nhiều so với việc có cấu trúc.",
+    "RQ2: trên 50 target thật, qua ba lần lặp, vòng lặp grounding (aria snapshot cộng phản hồi số phần tử khớp trên trang "
+    "thật) nâng tỉ lệ script chạy đạt ở lần đầu từ 68–72% lên 96–100%, có ý nghĩa thống kê ở cả ba lần; chỉ đưa snapshot "
+    "vào prompt thì chưa đủ chắc chắn. Phép kiểm assertion rỗng cho thấy 2 trong số các pass đó là pass giả do nth trỏ "
+    "sai phần tử, nên grounding theo số lượng cần thêm kiểm tra ngữ nghĩa.",
+    "RQ3: trên ShopLab, sửa lỗi có ràng buộc sửa được 24/31 lỗi giao diện mà không làm yếu assertion nào, ngang sửa tự do, "
+    "và không che lỗi nghiệp vụ nào (0/17), trong khi LLM sửa tự do che 8–10/17 lỗi bằng cách đổi giá trị kỳ vọng hoặc "
+    "chèn bước. Chi phí là khoảng 11 đề xuất mỗi lần chạy phải chuyển lên người, trong đó 6 là escalate oan.",
+    "RQ4: giao thức, hai bộ nhiệm vụ và bộ chấm tự động bằng mutation đã sẵn sàng; dữ liệu người tham gia là phần việc "
+    "còn lại.",
+    "Bản thân quá trình đánh giá đã tìm ra nhiều lỗi mà unit test không bắt được: prompt thiếu đặc tả trường URL của goto, "
+    "Chromium treo khi tải trang qua HTTP/2, self-healing chỉ chữa một locator mỗi lượt, BVA thiếu ngữ cảnh hành động, "
+    "và locator nth trỏ sai phần tử. Mỗi lỗi đều được ghi lại cùng cách phát hiện và cách sửa.",
+]
 
 LIMITS = [
     "Dataset RQ1 nhỏ (15 tài liệu, 47 yêu cầu) và nhãn chưa được nhiều người gán độc lập.",

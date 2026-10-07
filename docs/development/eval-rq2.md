@@ -23,3 +23,21 @@ nhưng không kiểm tính duy nhất (6 nút "Add to cart" ở SauceDemo) và k
 **Lần đo 1 (bị loại):** baseline 21/50, aria 38/50 — 17 script baseline có `page.goto("")` vì SYSTEM_PROMPT không nói
 goto đặt URL ở `arg`; DeepSeek đặt vào `value`. Đã sửa prompt (1 dòng) cho cả hai nhánh rồi đo lại (bảng trên).
 Kết quả lần 1 lưu ở `rq2_results_both_v1.json` (không commit).
+
+## Bản 2 — vòng lặp grounding, 3 lần lặp (deepseek-chat)
+
+Lệnh: `python run_rq2.py --profile cloud --context all --out rq2_v2_r{1,2,3}.json`. Template mới: timeout thao tác 10s,
+trường `nth`. Oracle 49/50 (PT-04 vượt timeout 10s).
+
+| Nhánh | Lần 1 | Lần 2 | Lần 3 |
+|---|---|---|---|
+| none | 34 | 34 | 36 |
+| aria (snapshot trang đầu) | 39 | 41 | 41 |
+| aria_loop (+ phản hồi grounding, sinh lại 1 lần) | 49 | 48 | 50 |
+
+McNemar: none→aria p = 0,27 / 0,09 / 0,18 (không có ý nghĩa); none→aria_loop p ≤ 0,0013; aria→aria_loop p ≤ 0,016;
+aria_loop không làm mất target nào mà aria đạt.
+
+**Assertion rỗng** (`tools/rq2_vacuity.py`: bỏ fill/click rồi chạy lại, vẫn pass = assertion không phụ thuộc hành động):
+oracle rỗng ở 6 target + PT-04 → target yếu từ gốc. Rỗng do LLM chỉ ở aria_loop, cả 3 lần: PT-03 và UP-05 (kiểm tay),
+đều do `nth(0)` trỏ vào đoạn văn hướng dẫn/giải thích thay vì phần tử thật. Pass có ý nghĩa của aria_loop: 47 / 46 / 48.

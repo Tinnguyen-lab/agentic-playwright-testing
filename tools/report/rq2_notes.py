@@ -4,7 +4,7 @@ Số liệu dẫn ở đây đã đối chiếu với JSON: v2 none 32/50, aria 
 cặp aria_only 19 / none_only 2; nguyên nhân v2 none {timeout 13, strict 5}, aria {strict 9, timeout 5, hạ tầng 1};
 oracle 50/50.
 """
-UNIT_TESTS = 83
+UNIT_TESTS = 103
 ORACLE_PASS = 50
 
 RQ2_DISCUSSION = [

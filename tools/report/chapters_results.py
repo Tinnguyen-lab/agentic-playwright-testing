@@ -99,14 +99,14 @@ def rq2_v2_section(r, runs: list[dict], notes, vac_runs: list | None = None, vac
             p = run["paired_all"][key]
             x, y = key.split("__")
             b, c = p[f"{y}_only"], p[f"{x}_only"]
-            prow.append([str(i), f"{x} → {y}", str(b), str(c), vn(mcnemar(b, c), 3)])
+            prow.append([str(i), f"{x} → {y}", str(b), str(c), ("< 0,001" if (pv := mcnemar(b, c)) < 0.001 else vn(pv, 3))])
     r.table("So sánh theo cặp từng lần lặp", ["Lần", "Cặp", "Chỉ nhánh sau đạt", "Chỉ nhánh trước đạt", "p (McNemar)"],
             prow, [1.5, 4.5, 3.5, 3.5, 3], center_cols=(0, 2, 3, 4))
     refined = [sum(x.get("refined", False) for x in run["conditions"]["aria_loop"]["cases"]) for run in runs]
     r.p("Số target mà vòng lặp phải sinh lại (có locator khớp khác 1 khi grounding) ở mỗi lần: "
         f"{', '.join(map(str, refined))} trên 50.")
     if vac_runs and vac_oracle:
-        target_weak = set(vac_oracle["oracle"]["vacuous"])
+        target_weak = set(vac_oracle["oracle"]["vacuous"]) | set(notes.EXTRA_TARGET_WEAK)
         r.p(f"Oracle viết tay cũng rỗng ở {len(target_weak)} target ({', '.join(sorted(target_weak))}): trạng thái kỳ vọng "
             "đã có sẵn trước khi thao tác, nên bất kỳ test nào kiểm bằng văn bản hay URL cũng pass. Bảng dưới tách hai loại: "
             "rỗng do target (cũng rỗng ở oracle) và rỗng do LLM (oracle không rỗng, script LLM thì rỗng).")
@@ -115,7 +115,7 @@ def rq2_v2_section(r, runs: list[dict], notes, vac_runs: list | None = None, vac
             for c in ("none", "aria", "aria_loop"):
                 if vac and c in vac:
                     v = vac[c]
-                    llm = sorted(set(v["vacuous"]) - target_weak)
+                    llm = sorted((set(v["vacuous"]) - target_weak) | set(notes.MANUAL_LLM_VACUOUS.get(c, [])))
                     vrows.append([str(i), c, str(v["passed"]), str(v["checked"]),
                                   str(len(set(v["vacuous"]) & target_weak)), ", ".join(llm) or "—"])
         r.table("Kiểm tra assertion rỗng trên các script đã pass",
