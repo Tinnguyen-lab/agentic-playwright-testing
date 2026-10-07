@@ -1,5 +1,7 @@
 """Biến thể (mutation) của ShopLab cho RQ3. Mỗi biến thể = v0 + một nhóm thay đổi, có nhãn ground truth.
 
+14 biến thể đầu (T1–T8, S1–S6) dùng trong lúc phát triển; T9–T12, S7–S10 là tập độc lập, thêm sau khi chốt hệ thống.
+
 - technical: refactor UI, nghiệp vụ GIỮ NGUYÊN -> hành vi đúng của repair: sửa locator, test pass, assertion giữ nguyên.
 - semantic:  hành vi nghiệp vụ ĐỔI (bug thật) -> hành vi đúng: KHÔNG được làm test pass; phải chặn/escalate.
 """
@@ -13,6 +15,7 @@ BASE: dict = {
     "login_btn": "Login", "login_btn_id": "login-button",
     "msg_invalid": "Invalid username or password", "msg_required": "Username is required",
     "msg_locked": "Account is locked", "msg_logout": "You have been logged out",
+    "logout_link": "Logout", "error_id": "error",
     "after_login": "/products",
     # sản phẩm / giỏ
     "add_btn": "Add to cart", "add_testid": "add-{slug}", "badge_testid": "cart-count", "price_class": "price",
@@ -21,9 +24,10 @@ BASE: dict = {
     "first_label": "First name", "last_label": "Last name", "zip_label": "Zip code", "continue_btn": "Continue",
     "msg_first_required": "First name is required", "thanks": "Thank you for your order!",
     # profile
-    "name_label": "Display name", "save_btn": "Save", "msg_saved": "Profile saved",
+    "name_label": "Display name", "save_btn": "Save", "msg_saved": "Profile saved", "msg_save_failed": "Could not save profile",
     # hành vi
     "wrap": False, "locked_allowed": False, "skip_first_validation": False, "add_noop": False, "total_bug": False,
+    "logout_noop": False, "price_bug": False, "badge_bug": False, "save_fails": False,
 }
 
 VARIANTS: dict[str, dict] = {
@@ -54,6 +58,21 @@ VARIANTS: dict[str, dict] = {
                     "set": {"after_login": "/profile"}},
     "S5_locked": {"kind": "semantic", "desc": "Tài khoản bị khoá vẫn đăng nhập được", "set": {"locked_allowed": True}},
     "S6_add_noop": {"kind": "semantic", "desc": "Nút Add to cart không thêm gì vào giỏ", "set": {"add_noop": True}},
+    # ---- tập độc lập: thêm SAU khi đã chốt hệ thống (08/10/2026), không dùng để chỉnh repair/policy ----
+    "T9_cart_link": {"kind": "technical", "desc": "Đổi chữ liên kết Cart thành Basket", "set": {"cart_link": "Basket"}},
+    "T10_checkout_labels": {"kind": "technical", "desc": "Đổi nhãn ba ô của form checkout",
+                            "set": {"first_label": "Given name", "last_label": "Family name", "zip_label": "Postal code"}},
+    "T11_logout_text": {"kind": "technical", "desc": "Đổi chữ liên kết Logout thành Sign out",
+                        "set": {"logout_link": "Sign out"}},
+    "T12_error_id": {"kind": "technical", "desc": "Đổi id của khối báo lỗi (error -> form-error)",
+                     "set": {"error_id": "form-error"}},
+    "S7_logout_noop": {"kind": "semantic", "desc": "Logout không kết thúc phiên, quay lại trang Products",
+                       "set": {"logout_noop": True}},
+    "S8_price": {"kind": "semantic", "desc": "Giá hiển thị của sản phẩm đầu bị sai ($19.99 thay vì $29.99)",
+                 "set": {"price_bug": True}},
+    "S9_badge": {"kind": "semantic", "desc": "Badge giỏ hàng đếm thừa 1", "set": {"badge_bug": True}},
+    "S10_save_fails": {"kind": "semantic", "desc": "Lưu hồ sơ thất bại, hiện 'Could not save profile'",
+                       "set": {"save_fails": True}},
 }
 
 

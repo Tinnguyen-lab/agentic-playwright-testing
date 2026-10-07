@@ -25,8 +25,8 @@ LAYOUT = """<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Sh
 <style>body{font-family:sans-serif;max-width:720px;margin:24px auto}nav a{margin-right:12px}
 .card{border:1px solid #ccc;padding:8px;margin:8px 0}.error{color:#b00}.ok{color:#070}</style></head><body>
 {% if session.get('user') %}<nav><a href="/products">Products</a>
-<a href="/cart">{{c.cart_link}} (<span data-testid="{{c.badge_testid}}" id="cart-count">{{ session.get('cart', [])|length }}</span>)</a>
-<a href="/profile">Profile</a><a href="/logout">Logout</a></nav>{% endif %}
+<a href="/cart">{{c.cart_link}} (<span data-testid="{{c.badge_testid}}" id="cart-count">{{ session.get('cart', [])|length + (1 if c.badge_bug else 0) }}</span>)</a>
+<a href="/profile">Profile</a><a href="/logout">{{c.logout_link}}</a></nav>{% endif %}
 {{ body|safe }}</body></html>"""
 
 LOGIN = """<h1>ShopLab</h1>
@@ -40,11 +40,11 @@ LOGIN = """<h1>ShopLab</h1>
 <input id="{{c.pass_id}}" name="password" type="password" placeholder="{{c.pass_ph}}" data-testid="{{c.pass_testid}}">
 <button id="{{c.login_btn_id}}" type="submit">{{c.login_btn}}</button>
 </form>
-{% if error %}<div id="error" role="alert" class="error">{{error}}</div>{% endif %}"""
+{% if error %}<div id="{{c.error_id}}" role="alert" class="error">{{error}}</div>{% endif %}"""
 
 PRODUCTS_T = """<h1>Products</h1>
 {% for slug, name, cents in products %}<div class="card{% if c.wrap %} product-card{% endif %}">
-<h2>{{name}}</h2><span class="{{c.price_class}}">${{ '%.2f' % (cents/100) }}</span>
+<h2>{{name}}</h2><span class="{{c.price_class}}">${{ '%.2f' % ((cents - (1000 if c.price_bug and loop.first else 0))/100) }}</span>
 <form method="post" action="/add/{{slug}}" style="display:inline">
 <button data-testid="{{ c.add_testid.format(slug=slug) }}" aria-label="{{c.add_btn}} {{name}}">{{c.add_btn}}</button></form>
 </div>{% endfor %}"""
@@ -60,13 +60,13 @@ CHECKOUT = """<h1>Checkout</h1>
 <label for="last">{{c.last_label}}</label><input id="last" name="last">
 <label for="zip">{{c.zip_label}}</label><input id="zip" name="zip">
 <button type="submit">{{c.continue_btn}}</button></form>
-{% if error %}<div id="error" role="alert" class="error">{{error}}</div>{% endif %}"""
+{% if error %}<div id="{{c.error_id}}" role="alert" class="error">{{error}}</div>{% endif %}"""
 
 PROFILE = """<h1>Profile</h1>
 <form method="post" action="/profile">
 <label for="display-name">{{c.name_label}}</label><input id="display-name" name="name" value="{{name}}">
 <button type="submit">{{c.save_btn}}</button></form>
-{% if saved %}<div id="message" role="status" class="ok">{{c.msg_saved}}</div>{% endif %}"""
+{% if saved %}<div id="message" role="status" class="{{ 'error' if c.save_fails else 'ok' }}">{{ c.msg_save_failed if c.save_fails else c.msg_saved }}</div>{% endif %}"""
 
 
 def create_app(variant: str = "v0") -> Flask:
@@ -101,6 +101,8 @@ def create_app(variant: str = "v0") -> Flask:
 
     @app.get("/logout")
     def logout():
+        if c["logout_noop"]:
+            return redirect(url_for("products"))
         session.clear()
         return redirect("/login?bye=1")
 
@@ -143,7 +145,7 @@ def create_app(variant: str = "v0") -> Flask:
     def profile():
         if (r := need_login()) is not None:
             return r
-        if request.method == "POST":
+        if request.method == "POST" and not c["save_fails"]:
             session["name"] = request.form.get("name", "")
         return page(PROFILE, name=session.get("name", session["user"]), saved=request.method == "POST")
 

@@ -60,3 +60,28 @@ def test_summarize_masking_and_weakening():
     ]
     s = summarize(rows, ["a"])["a"]
     assert (s["tech_repaired"], s["tech_repaired_any"], s["sem_masked"], s["escalated"], s["weakened"]) == (1, 2, 1, 1, 2)
+
+
+def test_heldout_semantic_mutations_change_behaviour():
+    c = _client("S7_logout_noop")
+    _login(c)
+    assert c.get("/logout").headers["Location"].endswith("/products")
+    c = _client("S8_price")
+    _login(c)
+    assert b"$19.99" in c.get("/products").data and b"$29.99" not in c.get("/products").data
+    c = _client("S9_badge")
+    _login(c)
+    c.post("/add/backpack")
+    assert b'id="cart-count">2<' in c.get("/products").data
+    c = _client("S10_save_fails")
+    _login(c)
+    assert b"Could not save profile" in c.post("/profile", data={"name": "X"}).data
+
+
+def test_heldout_technical_mutations_keep_behaviour():
+    c = _client("T12_error_id")
+    assert b'id="form-error"' in _login(c, pw="wrong").data
+    c = _client("T11_logout_text")
+    _login(c)
+    assert b"Sign out" in c.get("/products").data
+    assert c.get("/logout").headers["Location"].endswith("/login?bye=1")
