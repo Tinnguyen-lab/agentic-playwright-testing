@@ -170,12 +170,13 @@ def chapter1(r: Report):
     r.h2("1.3 Câu hỏi nghiên cứu")
     r.table("Bốn câu hỏi nghiên cứu và trạng thái trong chuyên đề", ["RQ", "Câu hỏi", "Trạng thái"], [
         ["RQ1", "Chuẩn hoá tài liệu yêu cầu thành biểu diễn có cấu trúc có cải thiện tính hợp lệ và độ bao phủ của test case "
-         "so với đưa thẳng tài liệu cho LLM không?", "Đã đo phần phát hiện mơ hồ (sơ bộ)"],
+         "so với đưa thẳng tài liệu cho LLM không?", "Đã đo: 15 tài liệu, 47 yêu cầu, 83 điều kiện gold"],
         ["RQ2", "Kết hợp yêu cầu với DOM hoặc accessibility tree có cải thiện tỉ lệ mã Playwright chạy đạt ở lần đầu không?",
-         "Đã đo trên 50 target, 6 site"],
+         "Đã đo: 50 target, 6 site, 3 nhánh"],
         ["RQ3", "Sửa lỗi có ràng buộc và phê duyệt của con người có tăng tỉ lệ sửa thành công mà không đổi ý nghĩa test case "
-         "không?", "Có cơ chế và demo, chưa đo trên tập lớn"],
-        ["RQ4", "Hệ thống giảm bao nhiêu thời gian và thao tác thủ công so với quy trình truyền thống?", "Chưa đo"],
+         "không?", "Đã đo: ShopLab, 14 mutation, 3 nhánh"],
+        ["RQ4", "Hệ thống giảm bao nhiêu thời gian và thao tác thủ công so với quy trình truyền thống?",
+         RQ4_STATUS],
     ], [1.3, 10.7, 4], center_cols=(0,))
 
     r.h2("1.4 Phạm vi nghiên cứu")
@@ -190,7 +191,9 @@ def chapter1(r: Report):
         "Không sinh đồng thời Selenium, Cypress và Playwright; chỉ Playwright Python, trình duyệt Chromium, chạy tuần tự.",
         "Không tự sửa mã nguồn của ứng dụng được kiểm thử và không tự suy ra oracle từ yêu cầu mơ hồ.",
         "Không huấn luyện hay fine-tune LLM; chỉ dùng mô hình có sẵn qua API tương thích OpenAI.",
-        "Lưu trữ bền vào SQL Server và cổng duyệt AG-03..05 trên giao diện web chưa hoàn thành ở thời điểm viết chuyên đề.",
+        "DSL chỉ gồm goto, fill, click và ba loại assertion; kịch bản cần chọn dropdown, hover, nhấn phím hay double click "
+        "nằm ngoài phạm vi.",
+        "Thực nghiệm dùng ứng dụng demo và ứng dụng ShopLab do nhóm tự dựng, không phải ứng dụng doanh nghiệp.",
     ])
 
     r.h2("1.5 Đóng góp chính")
@@ -204,8 +207,10 @@ def chapter1(r: Report):
         "điều hướng.",
         "Repair policy tất định phân mức rủi ro theo nội dung thay đổi (locator, dữ liệu, assertion, bước), ngân sách sửa bằng "
         "2 và self-healing locator từ DOM sống, mọi đề xuất đều cần người duyệt.",
-        "Bộ đánh giá có ground truth: RQ1 trên tập yêu cầu chèn khuyết tật có chủ đích; RQ2 trên catalog 50 target có oracle "
-        "viết tay chứng minh mỗi target làm được.",
+        "Bộ đánh giá có ground truth: RQ1 trên 47 yêu cầu chèn khuyết tật có chủ đích và 83 điều kiện kiểm thử gold; RQ2 "
+        "trên catalog 50 target có oracle viết tay chứng minh mỗi target làm được; RQ3 trên ShopLab, một ứng dụng đích có "
+        "14 mutation gắn nhãn kỹ thuật/ngữ nghĩa, đo được việc cơ chế sửa có che lỗi thật hay không.",
+        "Hệ thống chạy được trọn luồng trên giao diện, lưu version, quyết định duyệt append-only và chuỗi truy vết vào DB.",
     ])
 
     r.h2("1.6 Công nghệ sử dụng")
@@ -217,8 +222,10 @@ def chapter1(r: Report):
         ["LLM local", "LM Studio + google/gemma-4-12b (GPU 8 GB)", "Backend miễn phí, chạy offline"],
         ["Sinh mã", "Jinja2", "Render PlaywrightPlan thành script Python tự chứa"],
         ["Đọc tài liệu", "python-docx, PyMuPDF", "Trích văn bản DOCX/PDF, giữ mốc trang để truy vết"],
-        ["Giao diện", "Streamlit", "Bảng duyệt yêu cầu (AG-01) và test case (AG-02)"],
-        ["Kiểm thử", "pytest", "Unit test offline bằng LLM giả lập"],
+        ["Giao diện", "Streamlit", "Quy trình duyệt AG-01..05, sinh và chạy script, lịch sử"],
+        ["Lưu trữ", "SQLAlchemy 2; SQLite / SQL Server Express", "Version, quyết định, truy vết, nhật ký thao tác"],
+        ["Ứng dụng đích", "Flask (ShopLab)", "App có mutation kiểm soát được cho RQ3, RQ4"],
+        ["Kiểm thử", "pytest, pytest-playwright", "Unit test offline; chạy test của người tham gia RQ4"],
     ], [3.6, 6, 6.4])
 
 
@@ -356,10 +363,14 @@ def chapter3(r: Report):
         ["src/agents/", "Năm agent: requirement, test_design, playwright_generation, execution, repair"],
         ["src/services/", "Dịch vụ tất định: llm_client, boundary_analysis, locator_policy, locator_healing, repair_policy, "
                           "script_template, traceability, document_loader"],
-        ["src/evaluation/", "Bộ đánh giá RQ1: dataset, metrics, evaluator, design_metrics"],
+        ["src/services/browser_tasks.py", "Tác vụ trình duyệt dùng chung: snapshot, grounding, dò bước hỏng, chữa theo lô"],
+        ["src/database/, src/repositories/", "Schema SQLAlchemy và repository (version, duyệt, truy vết, nhật ký)"],
+        ["src/evaluation/", "Bộ đánh giá phát hiện mơ hồ: dataset, metrics, evaluator, design_metrics"],
         ["src/ui/", "Giao diện Streamlit (app.py) và logic duyệt thuần (review.py)"],
-        ["run_*.py", "CLI cho từng agent, pipeline đầy đủ và thực nghiệm RQ2"],
-        ["datasets/reference/", "Ground truth RQ1 (5 tài liệu) và catalog 50 target RQ2"],
+        ["apps/shoplab/", "Ứng dụng đích ShopLab, 14 mutation có nhãn, bộ 20 test"],
+        ["run_*.py, evaluate_*.py", "CLI cho từng agent, pipeline đầy đủ và các thực nghiệm RQ1–RQ3"],
+        ["tools/", "Công cụ thí nghiệm RQ4 và bộ dựng báo cáo"],
+        ["datasets/reference/", "Ground truth RQ1 (15 tài liệu), catalog 50 target RQ2, nhiệm vụ RQ4"],
         ["tests/unit/", "Unit test offline"],
     ], [4, 12])
 
@@ -412,9 +423,12 @@ def chapter3(r: Report):
         ["expect_url", "arg", "expect(page).to_have_url(arg)"],
         ["expect_visible", "strategy, value, role_name", "expect(<locator>).to_be_visible()"],
         ["expect_text", "strategy, value, arg", "expect(<locator>).to_contain_text(arg)"],
+        ["(mọi locator)", "nth ≥ 0, tuỳ chọn", "<locator>.nth(nth) khi nhiều phần tử giống hệt nhau"],
     ], [3, 5, 8])
     r.p("Strategy là một trong role, label, placeholder, text, test_id, css. Với role, value là vai trò ARIA còn role_name là "
-        "tên hiển thị. Prompt nhấn mạnh điểm này vì lỗi phổ biến nhất của LLM là đặt tên nút vào value.")
+        "tên hiển thị. Prompt nhấn mạnh điểm này vì lỗi phổ biến nhất của LLM là đặt tên nút vào value. Trường nth được thêm "
+        "sau khi RQ2 cho thấy một nhóm lỗi không giải được trong DSL cũ: trang có nhiều phần tử cùng vai trò và tên (sáu nút "
+        "\"Add to cart\" của SauceDemo).")
     r.h3("3.5.2 Chính sách locator và grounding")
     r.p("Khi có nhiều locator ứng viên cho cùng phần tử, locator_policy chọn locator khớp đúng một phần tử, ưu tiên theo thứ tự "
         "role, label, placeholder, text, test_id, css như khuyến nghị của Playwright. Grounding đếm số phần tử khớp với mỗi "
@@ -428,14 +442,21 @@ def chapter3(r: Report):
         "trang đích lúc vừa mở, cắt tối đa 6.000 ký tự, kèm chỉ dẫn: với phần tử có trong snapshot thì dùng đúng role và tên "
         "như snapshot; phần tử xuất hiện sau điều hướng thì suy luận như thường. Khi không truyền page_context, prompt giữ "
         "nguyên như baseline. Unit test kiểm tra cả hai trường hợp.")
+    r.h3("3.5.4 Vòng lặp grounding")
+    r.p("Snapshot cho LLM biết phần tử nào tồn tại nhưng không cho biết locator nó viết ra có khớp đúng một phần tử hay "
+        "không. Vòng lặp grounding ghép hai cơ chế: sau khi LLM sinh plan, ground_flow chạy plan trên trang thật và đếm số "
+        "phần tử khớp ở từng bước. Nếu có locator khớp 0 hoặc nhiều hơn 1, hàm grounding_feedback dựng phản hồi gồm action "
+        "lỗi, số phần tử khớp và aria snapshot của trang tại đúng bước đó (kể cả trang sau điều hướng), rồi gửi lại cho LLM "
+        "để sinh lại đúng một lần. Script cuối cùng vẫn chỉ được chạy một lần.")
 
     r.h2("3.6 Execution Agent")
     r.p("Execution Agent ghi script ra tệp, chạy trong tiến trình con với timeout 120 giây và thu stdout, stderr, ảnh chụp. "
         "Trạng thái được phân loại: passed khi tiến trình thoát mã 0 và in PASSED; failed khi stderr chứa AssertionError, "
         "TimeoutError hoặc expect(; blocked khi quá timeout; các trường hợp còn lại là error. Agent không sửa test.")
-    r.p("Template script cấu hình hai tham số chạy, áp dụng như nhau cho mọi script. Timeout của expect là 10 giây vì một số "
-        "trang demo cần khoảng 5 giây mới hiện kết quả, đúng bằng mặc định 5 giây của Playwright. Chromium chạy với cờ "
-        "--disable-http2. Lý do của cờ này trình bày ở mục 4.3.4.")
+    r.p("Template script cấu hình các tham số chạy, áp dụng như nhau cho mọi script. Timeout của expect là 10 giây vì một "
+        "số trang demo cần khoảng 5 giây mới hiện kết quả, đúng bằng mặc định 5 giây của Playwright. Timeout thao tác "
+        "(click, fill) là 10 giây thay cho mặc định 30 giây, để script hỏng theo chủ đích trong RQ3 không chiếm quá nhiều "
+        "thời gian; timeout điều hướng giữ 30 giây. Chromium chạy với cờ --disable-http2, lý do trình bày ở mục 4.4.4.")
 
     r.h2("3.7 Repair Agent và chính sách sửa có ràng buộc")
     r.p("Repair Agent nhận test lỗi kèm bằng chứng và tạo đề xuất sửa dạng plan mới. Mức rủi ro do repair_policy quyết định "
@@ -452,6 +473,13 @@ def chapter3(r: Report):
         "mờ với ý định của locator cũ, đếm số phần tử khớp, rồi chọn ứng viên duy nhất theo locator_policy. Không có ứng viên "
         "duy nhất thì trả về rỗng. Trong demo, locator cố ý sai placeholder:Usernamex được chữa thành role:textbox[Username] "
         "với rủi ro Low, và vẫn chờ người duyệt.")
+    r.p("Lần chạy RQ3 đầu cho thấy một giới hạn: self-healing chỉ chữa locator hỏng đầu tiên mỗi lượt, nên mutation đổi id "
+        "của cả ba ô đăng nhập cần ba lượt và vượt ngân sách 2. Hàm heal_all chữa theo lô: dò bước hỏng, chữa, chạy lại plan "
+        "đã chữa tới bước hỏng kế tiếp, lặp tới khi không còn locator chữa được; mọi chỗ chữa gộp thành một đề xuất. Mức "
+        "rủi ro vẫn do policy quyết định trên toàn bộ thay đổi. Tập ứng viên của thao tác click được mở rộng thêm "
+        "input[type=submit] và input[type=button], vì nút Login của SauceDemo là một thẻ input.")
+    r.p("RepairProposal mang theo plan mới (new_plan) bên cạnh diff. Đề xuất chỉ được áp dụng sau khi người duyệt đồng ý; "
+        "khi đó plan mới được lưu thành version script mới và chạy lại.")
 
     r.h2("3.8 Truy vết, cổng duyệt và giao diện")
     r.p("Traceability service dựng chuỗi Requirement → TestCase → Script → Execution → Repair từ các ID, tính độ phủ yêu cầu "
@@ -460,26 +488,27 @@ def chapter3(r: Report):
     r.table("Các cổng phê duyệt", ["Cổng", "Khi nào", "Trạng thái hiện thực"], [
         ["AG-01", "Yêu cầu bị gắn cờ mơ hồ", "Có trên giao diện Streamlit"],
         ["AG-02", "Trước khi sinh script từ test case", "Có trên giao diện Streamlit"],
-        ["AG-03", "Đề xuất sửa đổi assertion", "Có ở tầng policy, chưa có trên giao diện"],
-        ["AG-04", "Đề xuất đổi expected result", "Có ở tầng policy, chưa có trên giao diện"],
-        ["AG-05", "Đề xuất bỏ hoặc đổi bước kiểm thử", "Có ở tầng policy, chưa có trên giao diện"],
+        ["AG-03", "Đề xuất sửa đổi phần tử mà assertion kiểm", "Có trên giao diện Streamlit"],
+        ["AG-04", "Đề xuất đổi giá trị kỳ vọng (oracle)", "Có trên giao diện Streamlit"],
+        ["AG-05", "Đề xuất bỏ, thêm hoặc đổi bước kiểm thử", "Có trên giao diện Streamlit"],
     ], [2, 7, 7], center_cols=(0,))
-    r.p("Giao diện Streamlit cho chọn backend (mock, local, cloud) và nguồn tài liệu (mẫu, dán, tải lên), chạy Requirement "
-        "Agent, duyệt hoặc từ chối từng yêu cầu, sinh test case cho các yêu cầu đã duyệt, duyệt test case và xem bảng truy vết. "
-        "Logic duyệt nằm trong review.py, tách khỏi mã Streamlit để kiểm thử offline.")
+    storage_section(r)
+    ui_section(r)
 
-    r.h2("3.9 Lớp trừu tượng LLM")
+    r.h2("3.11 Lớp trừu tượng LLM")
     r.p("Mọi agent gọi LLM qua giao diện LLMClient với một phương thức structured_completion(system, user, schema). Có hai hiện "
         "thực: OpenAILLMClient gọi mọi endpoint tương thích OpenAI (OpenAI, DeepSeek, LM Studio, Ollama) bằng base_url, và "
         "MockLLMClient trả đối tượng dựng sẵn cho test. Tham số --profile cloud đọc .env.cloud thay cho .env, nên đổi giữa "
         "Gemma chạy local và DeepSeek chỉ cần một cờ dòng lệnh. LM Studio từ chối response_format kiểu json_object, nên hệ "
         "thống dùng json_schema, kiểu được cả ba backend chấp nhận.")
 
-    r.h2("3.10 Kiểm thử phần mềm")
+    r.h2("3.12 Kiểm thử phần mềm")
     r.p(f"Bộ unit test gồm {UNIT_TESTS} test chạy offline bằng MockLLMClient và hàm đếm giả, không cần mạng hay trình duyệt. "
         "Các phần tất định được test kỹ: repair policy, traceability, self-healing, boundary analysis, locator policy, bộ đánh "
-        "giá, render script và logic duyệt của giao diện. Phần cần trình duyệt thật (grounding đa bước, chạy script) được kiểm "
-        "chứng bằng chạy thật trên SauceDemo và bằng oracle RQ2 ở Chương 4.")
+        "giá RQ1, repository trên SQLite in-memory, hành vi các mutation của ShopLab (qua Flask test client), ánh xạ cổng "
+        "duyệt, chấm điểm SUS và logic duyệt của giao diện. Phần cần trình duyệt thật (grounding đa bước, chạy script, chữa "
+        "theo lô, luồng giao diện) được kiểm chứng bằng chạy thật: oracle RQ2, bước --check của RQ3 và kịch bản Playwright "
+        "đi hết luồng giao diện.")
 
 
 def chapter4(r: Report, cat):
@@ -489,17 +518,37 @@ def chapter4(r: Report, cat):
         "DeepSeek (model deepseek-chat) qua API tương thích OpenAI. Backend local là google/gemma-4-12b chạy trên LM Studio với "
         "GPU 8 GB. Các website đích đều là site demo công khai dựng cho mục đích luyện kiểm thử tự động.")
 
-    r.h2("4.2 Đánh giá RQ1: phát hiện mơ hồ")
-    r.p("Ground truth được tạo bằng cách chèn khuyết tật có chủ đích vào 5 tài liệu (auth, booking, cart, profile, search) với "
-        "tổng 15 yêu cầu. Mỗi yêu cầu có nhãn loại mơ hồ biết trước. Một số yêu cầu được giữ sạch để đo over-flag. Đơn vị so "
-        "khớp là cặp (yêu cầu, loại mơ hồ); yêu cầu dự đoán được căn với yêu cầu gốc theo thứ tự use case; mâu thuẫn được tính "
-        "như một loại ở mức toàn cục. Chạy: python evaluate_agent.py (thêm --profile cloud cho DeepSeek).")
+    shoplab_section(r)
 
-    r.h2("4.3 Đánh giá RQ2: ngữ cảnh DOM và first-run pass rate")
-    r.h3("4.3.1 Catalog target")
+    r.h2("4.3 Đánh giá RQ1: yêu cầu có cấu trúc")
+    r.h3("4.3.1 Dataset")
+    r.p("Ground truth được tạo bằng cách chèn khuyết tật có chủ đích vào tài liệu yêu cầu. Tập ban đầu gồm 5 tài liệu (auth, "
+        "booking, cart, profile, search) với 15 yêu cầu. Tập mở rộng thêm 10 tài liệu thuộc các nghiệp vụ khác (thư viện, "
+        "chuyển tiền, đăng ký học phần, kho, đặt bàn, ví điện tử, nghỉ phép, mạng xã hội nội bộ, mã giảm giá, hỗ trợ khách "
+        "hàng), tổng 15 tài liệu và 47 yêu cầu. Khoảng một nửa yêu cầu được chèn một khuyết tật thuộc rubric, hai tài liệu "
+        "có mâu thuẫn toàn cục; các yêu cầu sạch thường có ràng buộc số để kiểm khả năng sinh ca biên. Mỗi tài liệu có thêm "
+        "danh sách điều kiện kiểm thử gold (tổng 83 điều kiện: 41 positive, 18 negative, 24 biên), là các hành vi một kiểm "
+        "thử viên rút được từ văn bản đúng như đang viết. 10 tài liệu mới và toàn bộ điều kiện gold do Claude soạn nháp, "
+        "nhóm cần review trước khi dùng làm ground truth chính thức.")
+    r.h3("4.3.2 Phát hiện mơ hồ")
+    r.p("Đơn vị so khớp là cặp (yêu cầu, loại mơ hồ); yêu cầu dự đoán được căn với yêu cầu gốc theo thứ tự use case; mâu "
+        "thuẫn được tính như một loại ở mức toàn cục. Yêu cầu sạch dùng để đo over-flag. Chạy: python evaluate_agent.py "
+        "(thêm --profile cloud cho DeepSeek).")
+    r.h3("4.3.3 Chất lượng test case: hai nhánh")
+    r.p("Đây là phần trả lời trực tiếp câu hỏi RQ1. Nhánh direct đưa cả tài liệu cho LLM và yêu cầu sinh test case. Nhánh "
+        "pipeline chạy Requirement Agent, duyệt mô phỏng mọi yêu cầu, rồi chạy Test Design Agent và BVA trên từng yêu cầu. "
+        "Hai nhánh dùng cùng model và cùng các quy tắc chống bịa trong prompt. Một LLM giám khảo nhận tài liệu, danh sách "
+        "điều kiện gold và các test case, rồi với mỗi test case trả về các điều kiện nó thực sự kiểm và việc kết quả mong "
+        "đợi của nó có căn cứ trong tài liệu hay không. Từ đó tính độ phủ (tỉ lệ điều kiện gold có ít nhất một test kiểm), "
+        "tỉ lệ test không căn cứ và tỉ lệ test truy vết được về một yêu cầu có ID. Một mẫu ngẫu nhiên 20% phán quyết được "
+        "xuất ra CSV để người chấm lại và tính hệ số kappa (python evaluate_rq1.py --kappa). Lệnh chạy: python "
+        "evaluate_rq1.py --profile cloud.")
+
+    r.h2("4.4 Đánh giá RQ2: ngữ cảnh DOM và first-run pass rate")
+    r.h3("4.4.1 Catalog target")
     sites = Counter(t["site"] for t in cat)
     types = Counter(t["type"] for t in cat)
-    r.p(f"Catalog datasets/reference/rq2_targets.json gồm {len(cat)} target trên {len(sites)} website (Bảng 4.1), "
+    r.p(f"Catalog datasets/reference/rq2_targets.json gồm {len(cat)} target trên {len(sites)} website (Bảng 4.2), "
         f"{types['positive']} positive và {types['negative']} negative. Mỗi target là một test case viết bằng tiếng Việt (các "
         "bước và expected_result) trên một URL thật. expected_result mô tả kết quả thật của trang để LLM có căn cứ sinh "
         "assertion; RQ2 đo khả năng chuyển test case đã duyệt thành mã, không đo khả năng đoán oracle. Danh sách đầy đủ ở "
@@ -517,7 +566,7 @@ def chapter4(r: Report, cat):
         }[s]
         rows.append([SITE_NAME[s], str(n), kinds])
     r.table("Các website trong catalog RQ2", ["Website", "Số target", "Loại kịch bản"], rows, [4.6, 2, 9.4], center_cols=(1,))
-    r.h3("4.3.2 Oracle viết tay: kiểm chứng target khả thi")
+    r.h3("4.4.2 Oracle viết tay: kiểm chứng target khả thi")
     r.p("Một target có thể thất bại vì lý do không liên quan tới LLM: expected_result viết sai, site thay đổi, hoặc kịch bản "
         "cần thao tác ngoài DSL (chọn dropdown, hover, nhấn phím). Để loại các nguồn nhiễu này, mỗi target có một trường "
         "oracle là plan viết tay bằng đúng DSL mà LLM được dùng. Lệnh python run_rq2.py --context oracle chạy các plan này "
@@ -527,18 +576,23 @@ def chapter4(r: Report, cat):
         "double click bị loại vì DSL không có thao tác tương ứng. Oracle cũng bắt được lỗi trong catalog cũ: OrangeHRM hiển thị "
         "chữ \"Required\" dưới cả hai ô khi để trống cả hai, nên assertion text khớp hai phần tử và vi phạm strict mode. Target "
         "này được sửa thành bỏ trống riêng ô mật khẩu.")
-    r.h3("4.3.3 Hai nhánh so sánh")
+    r.h3("4.4.3 Các nhánh so sánh")
     r.p("Cả hai nhánh dùng cùng model, cùng system prompt, cùng 50 test case và cùng template thực thi. Chỉ khác ở ngữ cảnh "
         "đưa thêm vào prompt (Hình 4.1):")
     r.bullets([
         "none (baseline): prompt gồm URL đích, tiêu đề, loại, các bước và expected_result của test case.",
         "aria (DOM-aware): prompt như baseline, thêm aria snapshot của trang đích chụp ngay trước khi gọi LLM.",
+        "aria_loop (bản 2): như aria, thêm vòng lặp grounding của mục 3.5.4, tức sinh lại một lần nếu có locator khớp khác 1.",
     ])
+    r.p("Lần đo đầu (mục 5.2.1–5.2.2) chỉ có hai nhánh none và aria, chạy một lần. Bản 2 chạy cả ba nhánh, lặp ba lần để "
+        "ước lượng độ dao động giữa các lần sinh của LLM, với template mới (timeout thao tác 10 giây, trường nth). Với "
+        "template này, oracle đạt 49/50: PT-04 (bấm Log out trên Practice Test Automation) vượt timeout 10 giây vì trang "
+        "điều hướng chậm. Giới hạn này áp dụng như nhau cho mọi nhánh.")
     r.figure(str(HERE / "fig_rq2_protocol.png"), "Quy trình đo RQ2 trên hai nhánh")
     r.p("Script sinh ra được chạy đúng một lần, không qua Repair Agent hay sửa tay. Plan không hợp lệ (LLM trả JSON hỏng) được "
         "tính là error. Mỗi kết quả lưu kèm dòng lỗi cuối của stderr để phân loại nguyên nhân. Lệnh chạy: python run_rq2.py "
         "--profile cloud --context both --out rq2_results_both.json.")
-    r.h3("4.3.4 Kiểm soát nhiễu hạ tầng")
+    r.h3("4.4.4 Kiểm soát nhiễu hạ tầng")
     r.p("Khi chạy oracle lần đầu, mọi target của The Internet đều fail ở page.goto do timeout 30 giây, trong khi curl tải đúng "
         "các tài nguyên đó dưới 1 giây. Theo dõi request cho thấy Chromium kẹt khi tải tệp js và png tĩnh qua HTTP/2 từ mạng "
         "của nhóm. Thêm cờ --disable-http2 thì cả ba lần thử đều tải xong trong 3,3 giây. Lỗi này cũng có thể đã làm giảm kết "
@@ -547,15 +601,14 @@ def chapter4(r: Report, cat):
         "khi một script fail với thông điệp Page.goto: Timeout, hệ thống chạy lại đúng script đó một lần và đánh dấu "
         "infra_retry trong JSON. Script không đổi nên phép đo first-run vẫn giữ nguyên ý nghĩa: LLM chỉ có một cơ hội sinh mã.")
 
-    r.h2("4.4 Đánh giá RQ3 và RQ4")
-    r.p("RQ3 hiện mới có kịch bản demo trên SauceDemo: một test case đúng và một test case cố ý sai locator, chạy qua toàn bộ "
-        "pipeline bằng run_full_pipeline.py. RQ4 (thời gian và số thao tác thủ công tiết kiệm được) cần thí nghiệm có người "
-        "tham gia và chưa được thực hiện trong chuyên đề này.")
+    rq3_method(r, RQ3_COUNTS)
+    rq4_method(r)
 
 
 def chapter5(r: Report, res, cat, v1):
     r.h1("Chương 5: KẾT QUẢ THỰC NGHIỆM VÀ ĐÁNH GIÁ", chapter=True)
-    r.h2("5.1 RQ1: phát hiện mơ hồ trong yêu cầu")
+    r.h2("5.1 RQ1: yêu cầu có cấu trúc")
+    r.h3("5.1.1 Phát hiện mơ hồ trên tập ban đầu")
     r.p("Bảng 5.1 là kết quả trên 15 yêu cầu sau khi siết prompt. Dòng Gemma \"chưa nắn prompt\" là cấu hình trước khi thêm "
         "chỉ dẫn gắn cờ theo từng yêu cầu (mục 3.3).")
     r.table("Kết quả phát hiện mơ hồ trên tập 15 yêu cầu", ["Model", "Micro-P", "Micro-R", "Micro-F1", "Macro-F1", "Over-flag"], [
@@ -578,21 +631,20 @@ def chapter5(r: Report, res, cat, v1):
         "missing_precondition là loại khó nhất với cả hai. Nhãn gold của loại này cũng chủ quan nhất: mỗi yêu cầu chỉ có một "
         "khuyết tật được chèn, trong khi một người đọc khác có thể thấy thêm precondition còn thiếu. Với 15 yêu cầu, các con số "
         "này chỉ là sơ bộ; một yêu cầu đổi nhãn có thể làm F1 của một loại thay đổi vài chục điểm phần trăm.")
+    rq1_ambiguity(r, DATA["amb47"], notes_ext)
+    rq1_testgen(r, DATA["rq1_v1"], DATA["rq1_v2"], notes_ext)
 
     rq2_section(r, res, cat)
     rq2_v1_section(r, v1, res)
-    r.h3("5.2.2 Thảo luận")
+    r.h3("5.2.2 Thảo luận về lần đo đầu")
     for para in RQ2_DISCUSSION:
         r.p(para)
+    rq2_v2_section(r, DATA["rq2_runs"], notes_ext)
 
-    r.h2("5.3 RQ3: sửa lỗi có ràng buộc (demo)")
-    r.p("Chạy run_full_pipeline.py trên SauceDemo cho hai test case. TC-01 (đăng nhập hợp lệ) đạt grounding 3/3 locator khớp "
-        "đúng một phần tử và chạy PASSED. TC-02 cố ý dùng locator sai placeholder:Usernamex: grounding 2/3, chạy FAILED. Repair "
-        "Agent quét DOM sống và đề xuất role:textbox[Username]. Policy xếp đề xuất này mức Low vì chỉ đổi locator, đặt "
-        "requires_approval = true, và agent không tự áp dụng. Báo cáo truy vết sinh tự động ghi độ phủ yêu cầu 100%, độ phủ "
-        "thực thi 100%, pass rate 50% (một đạt, một lỗi có chủ đích).")
-    r.p("Kịch bản này chứng minh cơ chế hoạt động đúng như thiết kế. Nó chưa đủ để trả lời RQ3: cần một tập lỗi lớn hơn gồm "
-        "cả lỗi locator lẫn lỗi assertion, để đo tỉ lệ sửa thành công và tỉ lệ đề xuất làm đổi ngữ nghĩa bị chặn.")
+    rq3_results(r, DATA["rq3"], DATA["rq3_first"], notes_ext)
+    rq4_results(r, DATA["rq4"], notes_ext)
+    r.h2("5.5 Mối đe dọa tính hợp lệ")
+    r.bullets(notes_ext.THREATS)
 
 
 def rq2_section(r: Report, res, cat):
@@ -614,13 +666,13 @@ def rq2_section(r: Report, res, cat):
             rows, [5.2, 2.4, 4.2, 4.2], center_cols=(1, 2, 3))
     r.figure(str(HERE / "fig_rq2_sites.png"), "Tỉ lệ đạt lần đầu theo website, baseline và DOM-aware", width_cm=15)
 
-    r.p("Hai nhánh chạy trên cùng target nên có thể so sánh từng cặp (Bảng 5.5).")
+    r.p("Hai nhánh chạy trên cùng target nên có thể so sánh từng cặp (bảng dưới).")
     r.table("Bảng chéo kết quả theo cặp target", ["", "aria đạt", "aria trượt"], [
         ["none đạt", str(paired["both_pass"]), str(paired["none_only"])],
         ["none trượt", str(paired["aria_only"]), str(paired["both_fail"])],
     ], [5, 5.5, 5.5], center_cols=(1, 2))
     r.p(f"Có {paired['aria_only']} target chỉ nhánh aria đạt và {paired['none_only']} target chỉ baseline đạt. Kiểm định McNemar "
-        f"chính xác trên {paired['aria_only'] + paired['none_only']} cặp bất đồng cho p = {p_val:.3f}"
+        f"chính xác trên {paired['aria_only'] + paired['none_only']} cặp bất đồng cho p = {p_val:.3f}".replace('.', ',')
         + (", nhỏ hơn 0,05: khác biệt có ý nghĩa thống kê ở cỡ mẫu này." if p_val < 0.05 else
            ", không nhỏ hơn 0,05, nên với cỡ mẫu 50 chưa đủ bằng chứng thống kê để khẳng định khác biệt."))
 
@@ -631,7 +683,7 @@ def rq2_section(r: Report, res, cat):
             [[k, str(cn[k]), str(ca[k])] for k in keys] + [["Tổng số target trượt", str(sum(cn.values())), str(sum(ca.values()))]],
             [9, 3.5, 3.5], center_cols=(1, 2))
     retries = sum(c.get("infra_retry", False) for c in none["cases"] + aria["cases"])
-    r.p(f"Trong {2 * n} lần chạy có {retries} lần cần chạy lại do Page.goto: Timeout (mục 4.3.4).")
+    r.p(f"Trong {2 * n} lần chạy có {retries} lần cần chạy lại do Page.goto: Timeout (mục 4.4.4).")
 
 
 def rq2_v1_section(r: Report, v1, v2):
@@ -648,7 +700,7 @@ def rq2_v1_section(r: Report, v1, v2):
         "nhưng bỏ sót goto. Khi prompt dài thêm vì có aria snapshot, model lại điền đúng.")
     r.p("Nếu dừng ở lần đo này, khoảng cách giữa hai nhánh sẽ bị quy hết cho ngữ cảnh DOM, trong khi phần lớn nó đến từ một "
         "lỗi đặc tả không liên quan tới locator. Nhóm thêm một dòng \"goto: arg = URL\" vào prompt (áp dụng cho cả hai nhánh) "
-        "rồi đo lại toàn bộ. Các kết quả ở mục 5.2 là của lần đo thứ hai. Bảng 5.7 đặt hai lần đo cạnh nhau.")
+        "rồi đo lại toàn bộ. Các kết quả đầu mục 5.2 là của lần đo thứ hai; bảng dưới đặt hai lần đo cạnh nhau.")
     a2, b2 = v2["conditions"]["none"], v2["conditions"]["aria"]
     g1b = sum("invalid URL" in c["error"] for c in a2["cases"])
     g2b = sum("invalid URL" in c["error"] for c in b2["cases"])
@@ -683,28 +735,11 @@ def cause(c):
 def chapter6(r: Report):
     r.h1("Chương 6: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN", chapter=True)
     r.h2("6.1 Kết quả đạt được")
-    r.bullets(CONCLUSIONS)
+    r.bullets(notes_ext.CONCLUSIONS)
     r.h2("6.2 Hạn chế")
-    r.bullets([
-        "Tập RQ1 nhỏ (5 tài liệu, 15 yêu cầu), nhãn gold do nhóm tự gán với một khuyết tật mỗi yêu cầu; kết quả chỉ là sơ bộ.",
-        "RQ2 dùng 50 target trên site demo, phần lớn là luồng ngắn (1–5 bước). Ứng dụng nghiệp vụ thật có luồng dài và DOM lớn "
-        "hơn nhiều, nên snapshot 6.000 ký tự có thể không đủ.",
-        "Nhánh aria chỉ chụp trang đầu. Phần tử xuất hiện sau điều hướng (giỏ hàng, trang checkout) LLM vẫn phải đoán.",
-        "Mỗi nhánh chạy một lần với một model; chưa đo độ dao động giữa các lần sinh và giữa các model.",
-        "RQ3 mới có demo, RQ4 chưa đo. SQL Server và các cổng AG-03..05 trên giao diện chưa hoàn thành.",
-        "DSL chưa có select, hover, nhấn phím, double click, nên các kịch bản cần những thao tác này nằm ngoài phạm vi đo.",
-    ])
+    r.bullets(notes_ext.LIMITS)
     r.h2("6.3 Hướng phát triển")
-    r.bullets([
-        "Snapshot theo bước: kết hợp ground_flow để chụp aria snapshot sau mỗi lần điều hướng và đưa cho LLM sinh tiếp, thay vì "
-        "chỉ trang đầu.",
-        "Chạy RQ2 nhiều lần và trên nhiều model (Gemma local, DeepSeek, GPT) để đo độ dao động và kiểm định chặt hơn.",
-        "Xây tập lỗi có chủ đích cho RQ3 (đổi locator, đổi nhãn, đổi luồng) và đo tỉ lệ sửa thành công cùng tỉ lệ thay đổi "
-        "ngữ nghĩa bị chặn.",
-        "Thí nghiệm có người tham gia cho RQ4: so thời gian và số lần sửa tay giữa quy trình thủ công và pipeline.",
-        "Lưu trữ bền bằng SQL Server, đưa AG-03..05 lên giao diện, mở rộng DSL.",
-        "Mở rộng và cho nhiều người gán nhãn độc lập tập RQ1 để đo độ đồng thuận.",
-    ])
+    r.bullets(notes_ext.FUTURE)
 
 
 REFERENCES = [
@@ -738,11 +773,48 @@ def references_and_appendix(r: Report, cat):
     r.table("Catalog target RQ2 (datasets/reference/rq2_targets.json)", ["ID", "Website", "Loại", "Các bước", "Kết quả mong đợi"],
             rows, [1.5, 2.6, 1.8, 5.3, 4.8], center_cols=(0, 2))
 
+    from apps.shoplab.suite import SUITE
+    r.h1("PHỤ LỤC B: BỘ 20 TEST SHOPLAB (RQ3)")
+    r.chapter, r.n_table = "B", 0
+    r.table("Bộ test ShopLab (apps/shoplab/suite.py)", ["ID", "Loại", "Tiêu đề", "Các bước", "Kết quả mong đợi"],
+            [[tid, kind, title, "; ".join(steps), exp] for tid, kind, title, steps, exp, _ in SUITE],
+            [1.3, 1.8, 3.4, 5.6, 3.9], center_cols=(0, 1))
 
-from rq2_notes import CONCLUSIONS, ORACLE_PASS, RQ2_DISCUSSION, UNIT_TESTS  # noqa: E402  (viết sau khi có kết quả thật)
+    gold = json.loads((ROOT / "datasets/reference/ambiguity_eval/test_conditions.json").read_text(encoding="utf-8"))["cases"]
+    r.h1("PHỤ LỤC C: ĐIỀU KIỆN KIỂM THỬ GOLD (RQ1)")
+    r.chapter, r.n_table = "C", 0
+    r.table("83 điều kiện kiểm thử gold (datasets/reference/ambiguity_eval/test_conditions.json)",
+            ["Tài liệu", "ID", "UC", "Loại", "Điều kiện"],
+            [[doc.removeprefix("cases/").removesuffix(".md"), g["id"], str(g["uc"]), g["kind"], g["condition"]]
+             for doc, gs in gold.items() for g in gs], [2.3, 1.2, 1.1, 2, 9.4], center_cols=(1, 2, 3))
+
+
+import notes_ext  # noqa: E402  (nhận xét viết sau khi có kết quả thật)
+from chapters_ext import load as ext_load  # noqa: E402
+from chapters_ext import rq3_method, rq4_method, shoplab_section, storage_section, ui_section  # noqa: E402
+from chapters_results import rq1_ambiguity, rq1_testgen, rq2_v2_section, rq3_results, rq4_results  # noqa: E402
+from rq2_notes import ORACLE_PASS, RQ2_DISCUSSION, UNIT_TESTS  # noqa: E402  (viết sau khi có kết quả thật)
+
+RQ4_STATUS = notes_ext.RQ4_STATUS
+DATA: dict = {}
+RQ3_COUNTS: dict = {}
+
+
+def _load_data() -> None:
+    """Nạp mọi file kết quả đợt 2 (thiếu file nào thì mục tương ứng ghi 'chưa có kết quả')."""
+    DATA["amb47"] = ext_load("datasets/processed/eval_deepseek-chat.json")
+    DATA["rq1_v1"] = ext_load("rq1_results.json")
+    DATA["rq1_v2"] = ext_load("rq1_results_v2.json")
+    DATA["rq2_runs"] = [d for i in (1, 2, 3) if (d := ext_load(f"rq2_v2_r{i}.json"))]
+    rerun = ext_load("rq3_results_v2.json")
+    DATA["rq3"], DATA["rq3_first"] = (rerun, ext_load("rq3_results.json")) if rerun else (ext_load("rq3_results.json"), None)
+    DATA["rq4"] = ext_load("artifacts/rq4/rq4_results.json")
+    counts = Counter(x["variant"] for x in DATA["rq3"]["cases"] if x["arm"] == "constrained")
+    RQ3_COUNTS.update(counts)
 
 
 def build(results_path: str, v1_path: str, out: str):
+    _load_data()
     res = json.loads(Path(results_path).read_text(encoding="utf-8"))
     v1 = json.loads(Path(v1_path).read_text(encoding="utf-8"))
     cat = json.loads((ROOT / "datasets/reference/rq2_targets.json").read_text(encoding="utf-8"))["targets"]
