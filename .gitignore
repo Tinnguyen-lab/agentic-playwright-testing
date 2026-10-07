@@ -56,3 +56,6 @@ rq3_results*.json
 artifacts/exec_rq3/
 artifacts/exec_ui/
 artifacts/rq4/
+rq2_v2_*.json
+rq2_oracle*.json
+artifacts/rq2_v2_scripts/

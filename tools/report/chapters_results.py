@@ -80,7 +80,7 @@ def rq1_testgen(r, v1: dict, v2: dict, notes):
         r.p(para)
 
 
-def rq2_v2_section(r, runs: list[dict], notes):
+def rq2_v2_section(r, runs: list[dict], notes, vac_runs: list | None = None):
     r.h3("5.2.3 Bản 2: grounding vòng lặp, ba lần lặp")
     if not runs:
         r.p("Chưa có kết quả.")
@@ -105,6 +105,19 @@ def rq2_v2_section(r, runs: list[dict], notes):
     refined = [sum(x.get("refined", False) for x in run["conditions"]["aria_loop"]["cases"]) for run in runs]
     r.p("Số target mà vòng lặp phải sinh lại (có locator khớp khác 1 khi grounding) ở mỗi lần: "
         f"{', '.join(map(str, refined))} trên 50.")
+    if vac_runs:
+        vrows = []
+        for i, (run, vac) in enumerate(zip(runs, vac_runs), 1):
+            if not vac:
+                continue
+            for c in ("none", "aria", "aria_loop"):
+                if c in vac:
+                    v = vac[c]
+                    vrows.append([str(i), c, str(v["passed"]), str(v["checked"]), str(len(v["vacuous"])),
+                                  ", ".join(v["vacuous"]) or "—", str(v["passed"] - len(v["vacuous"]))])
+        r.table("Kiểm tra assertion rỗng trên các script đã pass",
+                ["Lần", "Nhánh", "Pass", "Kiểm được", "Rỗng", "Target có assertion rỗng", "Pass có ý nghĩa"],
+                vrows, [1.2, 2.2, 1.4, 1.9, 1.4, 5.5, 2.4], center_cols=(0, 2, 3, 4, 6))
     for para in notes.RQ2_V2:
         r.p(para)
 

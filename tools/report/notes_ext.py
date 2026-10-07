@@ -39,7 +39,32 @@ RQ1_TESTGEN = [
 ]
 
 RQ2_V2: list[str] = ["[chờ kết quả RQ2 bản 2]"]
-RQ3: list[str] = ["[chờ kết quả RQ3 lần chạy lại]"]
+RQ3 = [
+    "Kết quả chính ổn định qua hai lần chạy. Nhánh unconstrained biến 8/17 lỗi nghiệp vụ thật thành test pass (lần đầu "
+    "10/17) và làm yếu assertion 18 lần (lần đầu 21). Hai kiểu che lỗi lặp lại đúng như [8] mô tả. Kiểu thứ nhất là sửa "
+    "giá trị kỳ vọng cho khớp với bug: ở S1, assertion \"Invalid username or password\" bị đổi thành \"Something went "
+    "wrong\"; ở S2, tổng tiền kỳ vọng \"Total: $39.98\" bị đổi thành \"Total: $9.99\", đúng con số sai mà app đang hiển "
+    "thị vì bỏ qua món đầu tiên. Kiểu thứ hai là chèn thêm bước: ở S4, "
+    "app chuyển nhầm sang trang hồ sơ sau đăng nhập, agent thêm một lệnh goto tới trang sản phẩm để test đi tiếp. Mỗi "
+    "đề xuất đều \"hợp lý\" nếu nhìn riêng, và đều làm test mất khả năng phát hiện đúng lỗi nó được viết ra để bắt.",
+    "Nhánh constrained không che lỗi nào trong 17 ca semantic ở cả hai lần chạy: 5 ca được đẩy lên người duyệt với mức "
+    "High (đề xuất đổi assertion hoặc thêm bước), 12 ca còn lại vẫn fail vì không có cách sửa mức Low nào làm test pass. "
+    "Cả hai đều là hành vi đúng. Với mutation technical, nhánh này sửa được 24/31 mà không làm yếu assertion nào, ngang "
+    "nhánh unconstrained (23/31 sửa được mà không làm yếu, thêm 5 ca sửa được nhưng có làm yếu).",
+    "Cái giá là 6/31 ca technical bị escalate oan. Cả sáu đều cần đổi locator bên trong một assertion: T5 đổi test-id "
+    "của badge giỏ hàng, T7 đổi class của dòng tổng tiền. Policy hiện xếp mọi thay đổi trong assertion vào mức High, "
+    "nên người duyệt phải xem các đề xuất này dù giá trị kỳ vọng không đổi. Hàm repair_gate đã phân biệt được trường hợp "
+    "này (AG-03: đổi phần tử được kiểm, khác AG-04: đổi giá trị kỳ vọng), nên một hướng cải tiến là hạ nó xuống Medium "
+    "kèm bằng chứng grounding. Đổi lại, một assertion trỏ sang phần tử khác cũng có thể là cách làm yếu test (xem phần "
+    "assertion rỗng ở RQ2), nên nhóm giữ mức High ở phiên bản này.",
+    "Chữa theo lô nâng số mutation technical sửa được từ 21 lên 24 ở cả nhánh heal và constrained: mutation đổi id cả "
+    "ba ô đăng nhập giờ được chữa trong một đề xuất thay vì cần ba lượt. Nhánh heal chỉ dùng self-healing, không gọi LLM, "
+    "đạt cùng 24/31 và không che lỗi nào. Trên ShopLab, phần LLM trong nhánh constrained hầu như không đóng góp thêm "
+    "lần sửa nào được áp dụng: các đề xuất LLM đều chạm vào assertion hoặc bước, nên bị chuyển lên người.",
+    "Trả lời RQ3 trên tập này: sửa có ràng buộc giữ được tỉ lệ sửa thành công tương đương sửa tự do với lỗi giao diện "
+    "(24/31 so với 23/31 không làm yếu assertion), trong khi loại bỏ hoàn toàn việc che lỗi nghiệp vụ (0/17 so với 8–10/17). "
+    "Chi phí là số đề xuất phải người duyệt: 11 ca mỗi lần chạy.",
+]
 RQ4: list[str] = []
 RQ4_PENDING = [
     "Thí nghiệm có người tham gia chưa được tiến hành ở thời điểm viết chuyên đề. Toàn bộ công cụ đã sẵn sàng: hai bộ "
