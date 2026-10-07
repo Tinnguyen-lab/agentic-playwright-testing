@@ -42,7 +42,9 @@ def storage_section(r):
         "nguyên tắc. Một là artifact có thể sửa sau review (yêu cầu, test case, script) có cột version: lưu lại cùng nội "
         "dung thì giữ version cũ, nội dung đổi thì thêm một dòng version + 1, không ghi đè. Hai là quyết định duyệt, lần "
         "chạy, đề xuất sửa và sự kiện giao diện chỉ được thêm, không có API sửa hay xoá. Ba là nội dung có cấu trúc lưu "
-        "dạng JSON để dùng lại đúng model Pydantic của agent, không phải ánh xạ từng trường sang cột.")
+        "dạng JSON để dùng lại đúng model Pydantic của agent, không phải ánh xạ từng trường sang cột. Mọi cột chuỗi dùng kiểu Unicode (NVARCHAR trên SQL Server). Khi chạy bộ "
+        "test repository trên SQL Server, bản đầu dùng VARCHAR làm mất dấu tiếng Việt (\"Đăng nhập\" thành \"?ang nh?p\"), so "
+        "sánh nội dung sai nên version tăng oan; lỗi này không lộ ra trên SQLite.")
     r.table("Các bảng trong cơ sở dữ liệu", ["Bảng", "Nội dung", "Kiểu ghi"], [
         ["project", "Dự án và URL ứng dụng đích", "tạo một lần"],
         ["requirement_version", "Yêu cầu đã chuẩn hoá (JSON StructuredRequirement)", "có version"],

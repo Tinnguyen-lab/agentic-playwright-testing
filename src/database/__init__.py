@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -18,6 +19,7 @@ DEFAULT_URL = "sqlite:///artifacts/app.db"
 
 
 def get_engine(url: str | None = None) -> Engine:
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env")  # không ghi đè biến môi trường đã có
     url = url or os.getenv("DATABASE_URL", "").strip() or DEFAULT_URL
     if url.startswith("sqlite:///") and not url.endswith(":memory:"):
         Path(url.removeprefix("sqlite:///")).parent.mkdir(parents=True, exist_ok=True)
