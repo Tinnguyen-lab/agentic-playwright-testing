@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ACTION = re.compile(r"^\s*page\..*\.(fill|click)\(.*\)\s*$")
@@ -49,13 +50,13 @@ def main(argv=None) -> int:
         folder = Path(args.scripts) / cond
         if not folder.exists():
             continue
-        rows = {}
-        for case in data["cases"]:
-            f = folder / f"{case['id']}.py"
-            if case["status"] != "passed" or not f.exists():
-                continue
-            code, n_removed = strip_actions(f.read_text(encoding="utf-8"))
-            rows[case["id"]] = "n/a" if n_removed == 0 else ("vacuous" if still_passes(code) else "ok")
+        def judge(case):
+            code, n_removed = strip_actions((folder / f"{case['id']}.py").read_text(encoding="utf-8"))
+            return case["id"], "n/a" if n_removed == 0 else ("vacuous" if still_passes(code) else "ok")
+
+        todo = [c for c in data["cases"] if c["status"] == "passed" and (folder / f"{c['id']}.py").exists()]
+        with ThreadPoolExecutor(max_workers=4) as pool:  # mỗi script là một tiến trình trình duyệt riêng
+            rows = dict(pool.map(judge, todo))
         vac = [k for k, v in rows.items() if v == "vacuous"]
         out[cond] = {"passed": len(rows), "checked": sum(v != "n/a" for v in rows.values()), "vacuous": vac}
         print(f"{cond:10} pass {len(rows)} | kiểm được {out[cond]['checked']} | assertion rỗng {len(vac)}: {vac}")

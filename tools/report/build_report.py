@@ -639,7 +639,7 @@ def chapter5(r: Report, res, cat, v1):
     r.h3("5.2.2 Thảo luận về lần đo đầu")
     for para in RQ2_DISCUSSION:
         r.p(para)
-    rq2_v2_section(r, DATA["rq2_runs"], notes_ext, DATA["rq2_vac"])
+    rq2_v2_section(r, DATA["rq2_runs"], notes_ext, DATA["rq2_vac"], DATA["rq2_vac_oracle"])
 
     rq3_results(r, DATA["rq3"], DATA["rq3_first"], notes_ext)
     rq4_results(r, DATA["rq4"], notes_ext)
@@ -827,6 +827,7 @@ def _load_data() -> None:
     DATA["rq1_v2"] = ext_load("rq1_results_v2.json")
     DATA["rq2_runs"] = [d for i in (1, 2, 3) if (d := ext_load(f"rq2_v2_r{i}.json"))]
     DATA["rq2_vac"] = [ext_load(f"rq2_v2_vac_r{i}.json") for i in range(1, len(DATA["rq2_runs"]) + 1)]
+    DATA["rq2_vac_oracle"] = ext_load("rq2_v2_vac_oracle.json")
     rerun = ext_load("rq3_results_v2.json")
     DATA["rq3"], DATA["rq3_first"] = (rerun, ext_load("rq3_results.json")) if rerun else (ext_load("rq3_results.json"), None)
     DATA["rq4"] = ext_load("artifacts/rq4/rq4_results.json")

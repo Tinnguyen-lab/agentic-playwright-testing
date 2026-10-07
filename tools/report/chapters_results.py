@@ -80,7 +80,7 @@ def rq1_testgen(r, v1: dict, v2: dict, notes):
         r.p(para)
 
 
-def rq2_v2_section(r, runs: list[dict], notes, vac_runs: list | None = None):
+def rq2_v2_section(r, runs: list[dict], notes, vac_runs: list | None = None, vac_oracle: dict | None = None):
     r.h3("5.2.3 Bản 2: grounding vòng lặp, ba lần lặp")
     if not runs:
         r.p("Chưa có kết quả.")
@@ -105,19 +105,22 @@ def rq2_v2_section(r, runs: list[dict], notes, vac_runs: list | None = None):
     refined = [sum(x.get("refined", False) for x in run["conditions"]["aria_loop"]["cases"]) for run in runs]
     r.p("Số target mà vòng lặp phải sinh lại (có locator khớp khác 1 khi grounding) ở mỗi lần: "
         f"{', '.join(map(str, refined))} trên 50.")
-    if vac_runs:
+    if vac_runs and vac_oracle:
+        target_weak = set(vac_oracle["oracle"]["vacuous"])
+        r.p(f"Oracle viết tay cũng rỗng ở {len(target_weak)} target ({', '.join(sorted(target_weak))}): trạng thái kỳ vọng "
+            "đã có sẵn trước khi thao tác, nên bất kỳ test nào kiểm bằng văn bản hay URL cũng pass. Bảng dưới tách hai loại: "
+            "rỗng do target (cũng rỗng ở oracle) và rỗng do LLM (oracle không rỗng, script LLM thì rỗng).")
         vrows = []
-        for i, (run, vac) in enumerate(zip(runs, vac_runs), 1):
-            if not vac:
-                continue
+        for i, vac in enumerate(vac_runs, 1):
             for c in ("none", "aria", "aria_loop"):
-                if c in vac:
+                if vac and c in vac:
                     v = vac[c]
-                    vrows.append([str(i), c, str(v["passed"]), str(v["checked"]), str(len(v["vacuous"])),
-                                  ", ".join(v["vacuous"]) or "—", str(v["passed"] - len(v["vacuous"]))])
+                    llm = sorted(set(v["vacuous"]) - target_weak)
+                    vrows.append([str(i), c, str(v["passed"]), str(v["checked"]),
+                                  str(len(set(v["vacuous"]) & target_weak)), ", ".join(llm) or "—"])
         r.table("Kiểm tra assertion rỗng trên các script đã pass",
-                ["Lần", "Nhánh", "Pass", "Kiểm được", "Rỗng", "Target có assertion rỗng", "Pass có ý nghĩa"],
-                vrows, [1.2, 2.2, 1.4, 1.9, 1.4, 5.5, 2.4], center_cols=(0, 2, 3, 4, 6))
+                ["Lần", "Nhánh", "Pass", "Kiểm được", "Rỗng do target", "Rỗng do LLM"],
+                vrows, [1.2, 2.4, 1.6, 2.2, 3, 5.6], center_cols=(0, 2, 3, 4))
     for para in notes.RQ2_V2:
         r.p(para)
 
