@@ -28,8 +28,11 @@ Tài liệu này dành cho người điều phối buổi thí nghiệm. Mọi l
 
 ## 2. Người tham gia
 
-4–6 người: thành viên nhóm và sinh viên CNTT đã biết Python cơ bản. Ghi lại mức kinh nghiệm Playwright (chưa dùng /
-đã dùng / thành thạo). Người tham gia đồng ý bằng lời trước khi bắt đầu; không thu thông tin cá nhân ngoài mã P1..P6.
+4 người (tối thiểu 2, khi đó ghi là pilot): sinh viên CNTT **ngoài nhóm** đã biết Python cơ bản. Thành viên nhóm không
+tham gia vì đã biết các mutation và tiêu chí chấm; hai thành viên làm người điều phối. Có 2 máy thì chạy song song 2
+người, mỗi máy một người điều phối. Mỗi người mất khoảng 75 phút (2 phiên × 30 phút, đọc đề, phiếu SUS).
+Ghi lại mức kinh nghiệm Playwright (chưa dùng / đã dùng / thành thạo). Người tham gia đồng ý bằng lời trước khi bắt
+đầu; không thu thông tin cá nhân ngoài mã P1..P6.
 
 ## 3. Chuẩn bị máy (một lần)
 
@@ -72,7 +75,7 @@ P1..P6. Ở ô "Dự án" nhập `rq4-<mã>-<bộ>`, ví dụ `rq4-P1-B`. Ở ô
 | Điểm SUS (0–100) | phiếu mục 6 → `artifacts/rq4/sus.csv` | |
 
 Tổng hợp: `python tools/rq4/rq4.py analyze` → `artifacts/rq4/rq4_results.json` (từng người + trung vị theo điều kiện).
-Với 4–6 người, báo cáo dạng mô tả (trung vị, từng cặp), không kết luận thống kê mạnh.
+Với 2–4 người, báo cáo dạng mô tả (trung vị, từng cặp), không kết luận thống kê mạnh.
 
 ## 6. Phiếu SUS (System Usability Scale)
 
@@ -92,7 +95,7 @@ Thang 1 (hoàn toàn không đồng ý) đến 5 (hoàn toàn đồng ý). Ngư�
 
 ## 7. Mối đe dọa tính hợp lệ cần ghi trong báo cáo
 
-- Cỡ mẫu nhỏ và người tham gia gần nhóm nghiên cứu (có thể thiên vị điều kiện `system`).
+- Cỡ mẫu nhỏ; người tham gia là bạn cùng lớp của nhóm (có thể thiên vị điều kiện `system` để "giúp" nhóm).
 - Hiệu ứng học: phiên 2 dễ hơn vì đã quen ShopLab. Đảo cân bằng giảm nhưng không loại bỏ hoàn toàn.
 - Nhiệm vụ ngắn, ứng dụng nhỏ; kết quả không suy rộng cho bộ test lớn.
 - Bộ chấm chỉ kiểm hành vi chính của từng yêu cầu bằng một mutation; test có thể đúng ở khía cạnh khác mà không được ghi

@@ -148,7 +148,7 @@ LIMITS = [
 ]
 
 FUTURE = [
-    "Tiến hành thí nghiệm RQ4 theo giao thức đã chuẩn bị, 4–6 người tham gia.",
+    "Tiến hành thí nghiệm RQ4 theo giao thức đã chuẩn bị, 4 sinh viên ngoài nhóm tham gia.",
     "Mở rộng dataset RQ1, cho nhiều người gán nhãn độc lập, tính kappa cho giám khảo LLM.",
     "Đánh giá lại các cải tiến (quy tắc sinh test, vòng lặp grounding, chữa theo lô) trên tập dữ liệu mới, không dùng để "
     "phát triển chúng.",
