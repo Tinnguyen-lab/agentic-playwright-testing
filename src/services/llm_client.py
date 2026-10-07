@@ -30,6 +30,19 @@ def _extract_json(content: str) -> str:
     return text
 
 
+def _closed(node):
+    """Đặt additionalProperties=false cho mọi object (strict json_schema của Anthropic bắt buộc)."""
+    if isinstance(node, dict):
+        if node.get("type") == "object":
+            node["additionalProperties"] = False
+        for v in node.values():
+            _closed(v)
+    elif isinstance(node, list):
+        for v in node:
+            _closed(v)
+    return node
+
+
 def _is_response_format_error(exc: Exception) -> bool:
     """True nếu lỗi do backend không hỗ trợ kiểu response_format đang dùng (vd DeepSeek từ chối json_schema)."""
     msg = str(exc).lower()
@@ -61,6 +74,8 @@ class OpenAILLMClient:
 
     def __init__(self, model: str, api_key: str, base_url: str = "", client=None):
         self._model = model
+        # Endpoint tương thích OpenAI của Anthropic: json_schema phải strict, model mới không nhận temperature.
+        self._anthropic = "anthropic.com" in (base_url or "")
         if client is not None:
             self._client = client
         else:
@@ -70,12 +85,11 @@ class OpenAILLMClient:
 
     def structured_completion(self, system_prompt: str, user_prompt: str, schema: type[T]) -> T:
         json_schema = schema.model_json_schema()
+        fmt = {"name": schema.__name__, "schema": json_schema}
+        if self._anthropic:
+            fmt = {**fmt, "strict": True, "schema": _closed(schema.model_json_schema())}
         try:
-            content = self._call(
-                system_prompt,
-                user_prompt,
-                {"type": "json_schema", "json_schema": {"name": schema.__name__, "schema": json_schema}},
-            )
+            content = self._call(system_prompt, user_prompt, {"type": "json_schema", "json_schema": fmt})
         except Exception as exc:
             if not _is_response_format_error(exc):
                 raise
@@ -91,6 +105,6 @@ class OpenAILLMClient:
                 {"role": "user", "content": user_prompt},
             ],
             response_format=response_format,
-            temperature=0,
+            **({} if self._anthropic else {"temperature": 0}),
         )
         return resp.choices[0].message.content or "{}"
