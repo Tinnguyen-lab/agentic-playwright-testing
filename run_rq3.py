@@ -101,7 +101,8 @@ def repair_case(arm, tc, plan, result, browser, executor, agents, name):
         current = proposal.new_plan
         result = execute(current, f"{name}_{arm}_{attempt}", executor)
         if result.status.value == "passed":
-            outcome = "repaired"
+            # pass lại mà không đổi gì -> lần fail ban đầu là chập chờn, không phải gãy thật: loại khỏi phép đếm
+            outcome = "repaired" if applied_kinds else "flaky"
             break
     return {"outcome": outcome, "attempts": attempt, "kinds": sorted(applied_kinds), "risk": last_risk,
             "weakened": bool(applied_kinds & WEAKENING)}
@@ -175,7 +176,7 @@ def main(argv: list[str] | None = None) -> int:
 def summarize(rows, arms):
     out = {}
     for arm in arms:
-        r = [x for x in rows if x["arm"] == arm]
+        r = [x for x in rows if x["arm"] == arm and x["outcome"] != "flaky"]
         tech = [x for x in r if x["kind"] == "technical"]
         sem = [x for x in r if x["kind"] == "semantic"]
         out[arm] = {

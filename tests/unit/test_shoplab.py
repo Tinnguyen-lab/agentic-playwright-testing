@@ -85,3 +85,10 @@ def test_heldout_technical_mutations_keep_behaviour():
     _login(c)
     assert b"Sign out" in c.get("/products").data
     assert c.get("/logout").headers["Location"].endswith("/login?bye=1")
+
+
+def test_summarize_excludes_flaky():
+    rows = [{"arm": "a", "kind": "semantic", "variant": "S9", "outcome": "flaky", "kinds": []},
+            {"arm": "a", "kind": "semantic", "variant": "S9", "outcome": "escalated"}]
+    s = summarize(rows, ["a"])["a"]
+    assert s["sem_n"] == 1 and s["sem_masked"] == 0
