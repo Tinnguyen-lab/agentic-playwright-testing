@@ -170,11 +170,11 @@ def chapter1(r: Report):
     r.h2("1.3 Câu hỏi nghiên cứu")
     r.table("Bốn câu hỏi nghiên cứu và trạng thái trong chuyên đề", ["RQ", "Câu hỏi", "Trạng thái"], [
         ["RQ1", "Chuẩn hoá tài liệu yêu cầu thành biểu diễn có cấu trúc có cải thiện tính hợp lệ và độ bao phủ của test case "
-         "so với đưa thẳng tài liệu cho LLM không?", "Đã đo: 15 tài liệu, 47 yêu cầu, 83 điều kiện gold"],
+         "so với đưa thẳng tài liệu cho LLM không?", "Đã đo: 25 tài liệu (10 độc lập), 86 yêu cầu, 158 điều kiện gold"],
         ["RQ2", "Kết hợp yêu cầu với DOM hoặc accessibility tree có cải thiện tỉ lệ mã Playwright chạy đạt ở lần đầu không?",
-         "Đã đo: 50 target, 6 site, 3 nhánh"],
+         "Đã đo: 62 target (12 độc lập), 10 site, 3 model"],
         ["RQ3", "Sửa lỗi có ràng buộc và phê duyệt của con người có tăng tỉ lệ sửa thành công mà không đổi ý nghĩa test case "
-         "không?", "Đã đo: ShopLab, 14 mutation, 3 nhánh"],
+         "không?", "Đã đo: ShopLab, 22 mutation (8 độc lập), 2 model"],
         ["RQ4", "Hệ thống giảm bao nhiêu thời gian và thao tác thủ công so với quy trình truyền thống?",
          RQ4_STATUS],
     ], [1.3, 10.7, 4], center_cols=(0,))
@@ -207,9 +207,10 @@ def chapter1(r: Report):
         "điều hướng.",
         "Repair policy tất định phân mức rủi ro theo nội dung thay đổi (locator, dữ liệu, assertion, bước), ngân sách sửa bằng "
         "2 và self-healing locator từ DOM sống, mọi đề xuất đều cần người duyệt.",
-        "Bộ đánh giá có ground truth: RQ1 trên 47 yêu cầu chèn khuyết tật có chủ đích và 83 điều kiện kiểm thử gold; RQ2 "
-        "trên catalog 50 target có oracle viết tay chứng minh mỗi target làm được; RQ3 trên ShopLab, một ứng dụng đích có "
-        "14 mutation gắn nhãn kỹ thuật/ngữ nghĩa, đo được việc cơ chế sửa có che lỗi thật hay không.",
+        "Bộ đánh giá có ground truth: RQ1 trên 86 yêu cầu chèn khuyết tật có chủ đích và 158 điều kiện kiểm thử gold; RQ2 "
+        "trên catalog 62 target có oracle viết tay chứng minh mỗi target làm được; RQ3 trên ShopLab, một ứng dụng đích có "
+        "22 mutation gắn nhãn kỹ thuật/ngữ nghĩa, đo được việc cơ chế sửa có che lỗi thật hay không. Mỗi RQ có một tập "
+        "kiểm thử độc lập soạn sau khi chốt hệ thống.",
         "Hệ thống chạy được trọn luồng trên giao diện, lưu version, quyết định duyệt append-only và chuỗi truy vết vào DB.",
     ])
 
@@ -367,10 +368,10 @@ def chapter3(r: Report):
         ["src/database/, src/repositories/", "Schema SQLAlchemy và repository (version, duyệt, truy vết, nhật ký)"],
         ["src/evaluation/", "Bộ đánh giá phát hiện mơ hồ: dataset, metrics, evaluator, design_metrics"],
         ["src/ui/", "Giao diện Streamlit (app.py) và logic duyệt thuần (review.py)"],
-        ["apps/shoplab/", "Ứng dụng đích ShopLab, 14 mutation có nhãn, bộ 20 test"],
+        ["apps/shoplab/", "Ứng dụng đích ShopLab, 22 mutation có nhãn, bộ 20 test"],
         ["run_*.py, evaluate_*.py", "CLI cho từng agent, pipeline đầy đủ và các thực nghiệm RQ1–RQ3"],
         ["tools/", "Công cụ thí nghiệm RQ4 và bộ dựng báo cáo"],
-        ["datasets/reference/", "Ground truth RQ1 (15 tài liệu), catalog 50 target RQ2, nhiệm vụ RQ4"],
+        ["datasets/reference/", "Ground truth RQ1 (25 tài liệu), catalog 50 + 12 target RQ2, nhiệm vụ RQ4"],
         ["tests/unit/", "Unit test offline"],
     ], [4, 12])
 
@@ -529,7 +530,9 @@ def chapter4(r: Report, cat):
         "có mâu thuẫn toàn cục; các yêu cầu sạch thường có ràng buộc số để kiểm khả năng sinh ca biên. Mỗi tài liệu có thêm "
         "danh sách điều kiện kiểm thử gold (tổng 83 điều kiện: 41 positive, 18 negative, 24 biên), là các hành vi một kiểm "
         "thử viên rút được từ văn bản đúng như đang viết. 10 tài liệu mới và toàn bộ điều kiện gold do Claude soạn nháp, "
-        "nhóm cần review trước khi dùng làm ground truth chính thức.")
+        "nhóm cần review trước khi dùng làm ground truth chính thức. Ngoài 15 tài liệu phát triển này, tập kiểm thử độc "
+        "lập gồm 10 tài liệu khác (thư mục cases/heldout, 39 yêu cầu, 75 điều kiện gold) được soạn sau khi đã chốt prompt "
+        "và thuật toán, chỉ dùng để đo một lần (mục 5.1.4).")
     r.h3("4.3.2 Phát hiện mơ hồ")
     r.p("Đơn vị so khớp là cặp (yêu cầu, loại mơ hồ); yêu cầu dự đoán được căn với yêu cầu gốc theo thứ tự use case; mâu "
         "thuẫn được tính như một loại ở mức toàn cục. Yêu cầu sạch dùng để đo over-flag. Chạy: python evaluate_agent.py "
@@ -552,7 +555,8 @@ def chapter4(r: Report, cat):
         f"{types['positive']} positive và {types['negative']} negative. Mỗi target là một test case viết bằng tiếng Việt (các "
         "bước và expected_result) trên một URL thật. expected_result mô tả kết quả thật của trang để LLM có căn cứ sinh "
         "assertion; RQ2 đo khả năng chuyển test case đã duyệt thành mã, không đo khả năng đoán oracle. Danh sách đầy đủ ở "
-        "Phụ lục A.")
+        "Phụ lục A. Tập kiểm thử độc lập datasets/reference/rq2_targets_heldout.json gồm 12 target trên 4 site chưa dùng, "
+        "soạn sau khi chốt vòng lặp grounding (mục 5.2.4).")
     rows = []
     for s, n in sorted(sites.items(), key=lambda kv: -kv[1]):
         sample = next(t for t in cat if t["site"] == s)
@@ -633,6 +637,7 @@ def chapter5(r: Report, res, cat, v1):
         "này chỉ là sơ bộ; một yêu cầu đổi nhãn có thể làm F1 của một loại thay đổi vài chục điểm phần trăm.")
     rq1_ambiguity(r, DATA["amb47"], notes_ext)
     rq1_testgen(r, DATA["rq1_v1"], DATA["rq1_v2"], notes_ext)
+    rq1_heldout(r, DATA["amb47"], DATA["amb_ho"], DATA["rq1_v2"], DATA["rq1_ho"], notes_ext)
 
     rq2_section(r, res, cat)
     rq2_v1_section(r, v1, res)
@@ -640,8 +645,10 @@ def chapter5(r: Report, res, cat, v1):
     for para in RQ2_DISCUSSION:
         r.p(para)
     rq2_v2_section(r, DATA["rq2_runs"], notes_ext, DATA["rq2_vac"], DATA["rq2_vac_oracle"])
+    rq2_models_heldout(r, DATA["rq2_models"], DATA["rq2_vac_ho"], notes_ext)
 
     rq3_results(r, DATA["rq3"], DATA["rq3_first"], notes_ext)
+    rq3_models_heldout(r, DATA["rq3_more"], notes_ext)
     rq4_results(r, DATA["rq4"], notes_ext)
     r.h2("5.5 Mối đe dọa tính hợp lệ")
     r.bullets(notes_ext.THREATS)
@@ -783,7 +790,7 @@ def references_and_appendix(r: Report, cat):
     gold = json.loads((ROOT / "datasets/reference/ambiguity_eval/test_conditions.json").read_text(encoding="utf-8"))["cases"]
     r.h1("PHỤ LỤC C: ĐIỀU KIỆN KIỂM THỬ GOLD (RQ1)")
     r.chapter, r.n_table = "C", 0
-    r.table("83 điều kiện kiểm thử gold (datasets/reference/ambiguity_eval/test_conditions.json)",
+    r.table(f"{sum(map(len, gold.values()))} điều kiện kiểm thử gold (datasets/reference/ambiguity_eval/test_conditions.json)",
             ["Tài liệu", "ID", "UC", "Loại", "Điều kiện"],
             [[doc.removeprefix("cases/").removesuffix(".md"), g["id"], str(g["uc"]), g["kind"], g["condition"]]
              for doc, gs in gold.items() for g in gs], [2.3, 1.2, 1.1, 2, 9.4], center_cols=(1, 2, 3))
@@ -805,6 +812,12 @@ def references_and_appendix(r: Report, cat):
         ["RQ2 bản 2", "python run_rq2.py --profile cloud --context all --out rq2_v2_r1.json (lặp r2, r3)"],
         ["RQ3 kiểm suite", "python run_rq3.py --check"],
         ["RQ3 ba nhánh", "python run_rq3.py --profile cloud --out rq3_results_v2.json"],
+        ["RQ1 tập độc lập", "python evaluate_rq1.py --profile cloud --only cases/heldout/ --out rq1_results_heldout.json"],
+        ["RQ2 tập độc lập", "python run_rq2.py --profile cloud --context all --catalog "
+         "datasets/reference/rq2_targets_heldout.json --out rq2_heldout_deepseek_r1.json"],
+        ["RQ2/RQ3 model khác", "thêm --profile claude (.env.claude) hoặc bỏ --profile (Gemma qua LM Studio, .env)"],
+        ["RQ3 mutation độc lập", "python run_rq3.py --profile cloud --variants T9_cart_link,...,S10_save_fails "
+         "--out rq3_results_heldout_deepseek.json"],
         ["RQ4", "python tools/rq4/rq4.py timer | export | check | analyze (xem rq4-protocol.md)"],
     ], [4.5, 11.5])
 
@@ -812,7 +825,8 @@ def references_and_appendix(r: Report, cat):
 import notes_ext  # noqa: E402  (nhận xét viết sau khi có kết quả thật)
 from chapters_ext import load as ext_load  # noqa: E402
 from chapters_ext import rq3_method, rq4_method, shoplab_section, storage_section, ui_section  # noqa: E402
-from chapters_results import rq1_ambiguity, rq1_testgen, rq2_v2_section, rq3_results, rq4_results  # noqa: E402
+from chapters_results import (rq1_ambiguity, rq1_heldout, rq1_testgen, rq2_models_heldout, rq2_v2_section,  # noqa: E402
+                              rq3_models_heldout, rq3_results, rq4_results)
 from rq2_notes import ORACLE_PASS, RQ2_DISCUSSION, UNIT_TESTS  # noqa: E402  (viết sau khi có kết quả thật)
 
 RQ4_STATUS = notes_ext.RQ4_STATUS
@@ -831,6 +845,23 @@ def _load_data() -> None:
     rerun = ext_load("rq3_results_v2.json")
     DATA["rq3"], DATA["rq3_first"] = (rerun, ext_load("rq3_results.json")) if rerun else (ext_load("rq3_results.json"), None)
     DATA["rq4"] = ext_load("artifacts/rq4/rq4_results.json")
+    DATA["amb_ho"] = ext_load("datasets/processed/eval_deepseek-chat_heldout.json")
+    DATA["rq1_ho"] = ext_load("rq1_results_heldout.json")
+    one = lambda f: [d] if (d := ext_load(f)) else []  # noqa: E731
+    ds_ho = [d for i in (1, 2, 3) if (d := ext_load(f"rq2_heldout_deepseek_r{i}.json"))]
+    DATA["rq2_models"] = [("50 target", "deepseek-chat", DATA["rq2_runs"]), ("50 target", "claude-sonnet-5", one("rq2_v2_claude.json")),
+                          ("50 target", "gemma-4-12b", one("rq2_v2_gemma.json")), ("12 độc lập", "deepseek-chat", ds_ho),
+                          ("12 độc lập", "claude-sonnet-5", one("rq2_heldout_claude.json")),
+                          ("12 độc lập", "gemma-4-12b", one("rq2_heldout_gemma.json"))]
+    vac = {}
+    for key, f in (("oracle", "rq2_heldout_vac_oracle.json"), ("deepseek-chat", "rq2_heldout_vac_deepseek_r1.json"),
+                   ("claude-sonnet-5", "rq2_heldout_vac_claude.json"), ("gemma-4-12b", "rq2_heldout_vac_gemma.json")):
+        if (d := ext_load(f)):
+            vac[key] = d["oracle" if key == "oracle" else "aria_loop"]["vacuous"]
+    DATA["rq2_vac_ho"] = vac
+    DATA["rq3_more"] = [("phát triển", ext_load("rq3_results_claude.json")),
+                        ("độc lập", ext_load("rq3_results_heldout_deepseek.json")),
+                        ("độc lập", ext_load("rq3_results_heldout_claude.json"))]
     counts = Counter(x["variant"] for x in DATA["rq3"]["cases"] if x["arm"] == "constrained")
     RQ3_COUNTS.update(counts)
 

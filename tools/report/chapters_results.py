@@ -164,3 +164,130 @@ def rq4_results(r, rq4: dict | None, notes):
             rows, [2, 2.5, 1.5, 2, 3.5, 2, 2.5], center_cols=(0, 1, 2, 3, 4, 5, 6))
     for para in notes.RQ4:
         r.p(para)
+
+
+def _tg_rows(d: dict, tag: str) -> list[list[str]]:
+    rows = []
+    for arm in ("direct", "pipeline"):
+        s = d["summary"][arm]
+        rows.append([f"{arm} {tag}", str(s["n_tc"]), f"{s['covered']}/{s['n_gold']} ({pct(s['covered'], s['n_gold'])})",
+                     _cov_kind(s, "positive"), _cov_kind(s, "negative"), _cov_kind(s, "boundary"),
+                     pct(s["unsupported"], s["n_tc"]), pct(s["traceable"], s["n_tc"])])
+    return rows
+
+
+def _cov_pair(d: dict) -> tuple[int, int]:
+    cov = {arm: {(x["doc"], c) for x in rows_ for c in x["judgement"]["covers"]} for arm, rows_ in d["rows"].items()}
+    return len(cov["pipeline"] - cov["direct"]), len(cov["direct"] - cov["pipeline"])
+
+
+def _p(b: int, c: int) -> str:
+    pv = mcnemar(b, c)
+    return "< 0,001" if pv < 0.001 else vn(pv, 3)
+
+
+def rq1_heldout(r, amb_dev: dict | None, amb_ho: dict | None, tg_dev: dict | None, tg_ho: dict | None, notes):
+    r.h3("5.1.4 Tập kiểm thử độc lập")
+    if not (amb_ho and tg_ho):
+        r.p("Chưa có kết quả.")
+        return
+    r.p("Các con số ở mục 5.1.2 và 5.1.3 đo trên chính tập dữ liệu đã dùng để chỉnh prompt và quy tắc sinh test, nên có "
+        "thể lạc quan. Sau khi chốt toàn bộ prompt và thuật toán, nhóm soạn thêm 10 tài liệu thuộc 10 nghiệp vụ chưa có "
+        f"trong tập phát triển (bãi đỗ xe, đặt lịch khám, tuyển dụng, thanh toán hoá đơn, phòng tập, thuê xe, đăng ký thi, "
+        f"giao hàng, chấm công, điểm thưởng), gồm {amb_ho['n_gold_reqs']} yêu cầu và {tg_ho['summary']['direct']['n_gold']} "
+        "điều kiện gold, tăng tỉ trọng các loại mơ hồ ít mẫu (missing_precondition, underspecified_action, conflict). Tập "
+        "này chỉ được chạy một lần với hệ thống đã chốt, không dùng để sửa gì.")
+    rows = []
+    for tag, a in (("phát triển", amb_dev), ("độc lập", amb_ho)):
+        if a:
+            m = a["micro"]
+            rows.append([tag, str(a["n_gold_reqs"]), vn(m["precision"]), vn(m["recall"]), vn(m["f1"]), vn(a["macro_f1"]),
+                         f"{a['overflag_clean']}/{a['clean_reqs']}"])
+    r.table(f"Phát hiện mơ hồ: tập phát triển so với tập độc lập ({amb_ho['model']})",
+            ["Tập", "Yêu cầu", "Precision", "Recall", "Micro-F1", "Macro-F1", "Gắn cờ nhầm"], rows,
+            [2.8, 1.8, 2, 2, 2, 2, 2.4], center_cols=(1, 2, 3, 4, 5, 6))
+    rows = _tg_rows(tg_dev, "phát triển") if tg_dev else []
+    rows += _tg_rows(tg_ho, "độc lập")
+    r.table("Chất lượng test case (quy tắc phiên bản 2): tập phát triển so với tập độc lập",
+            ["Nhánh", "Số TC", "Độ phủ gold", "Positive", "Negative", "Biên", "Không căn cứ", "Truy vết"],
+            rows, [3.3, 1.3, 2.6, 1.9, 1.9, 1.5, 2.0, 1.6], center_cols=(1, 2, 3, 4, 5, 6, 7))
+    parts = []
+    for tag, d in (("phát triển", tg_dev), ("độc lập", tg_ho)):
+        if d:
+            b, c = _cov_pair(d)
+            parts.append(f"tập {tag}: {b} điều kiện chỉ pipeline phủ, {c} chỉ direct phủ, p = {_p(b, c)}")
+    r.p("So sánh theo cặp trên từng điều kiện gold (McNemar chính xác): " + "; ".join(parts) + ".")
+    for para in notes.RQ1_HELDOUT:
+        r.p(para)
+
+
+def _rq2_cell(runs: list[dict], c: str) -> str:
+    vals = [x["conditions"][c]["passed"] for x in runs]
+    n = runs[0]["conditions"][c]["n"]
+    return (f"{min(vals)}–{max(vals)}/{n}" if len(set(vals)) > 1 else f"{vals[0]}/{n}") + \
+        f" ({pct(statistics.mean(vals), n)})"
+
+
+def rq2_models_heldout(r, sets: list[tuple[str, str, list[dict]]], vac_ho: dict, notes):
+    """sets: [(tập, model, [các lần chạy])]."""
+    r.h3("5.2.4 Model khác và tập kiểm thử độc lập")
+    sets = [s for s in sets if s[2]]
+    if not sets:
+        r.p("Chưa có kết quả.")
+        return
+    r.p("Để kiểm kết luận có phụ thuộc vào một model hay vào chính tập target đã dùng khi phát triển vòng lặp grounding "
+        "hay không, cùng harness được chạy thêm với Claude Sonnet 5 (cloud) và Gemma 4 12B (local, LM Studio), và trên một "
+        "tập độc lập 12 target thuộc 4 site chưa dùng (practice.expandtesting.com, rahulshettyacademy.com, "
+        "automationexercise.com, testpages.eviltester.com), soạn sau khi đã chốt hệ thống. Oracle viết tay đạt 12/12 hai "
+        "lần trước khi chạy LLM. DeepSeek chạy ba lần trên mỗi tập, các model khác một lần.")
+    rows = [[tap, model, str(len(runs)), _rq2_cell(runs, "none"), _rq2_cell(runs, "aria"), _rq2_cell(runs, "aria_loop")]
+            for tap, model, runs in sets]
+    r.table("First-run pass rate theo model và tập target", ["Tập", "Model", "Lần", "none", "aria", "aria_loop"], rows,
+            [2.6, 3.2, 1.1, 3, 3, 3.1], center_cols=(2, 3, 4, 5))
+    prow = []
+    for tap, model, runs in sets:
+        for i, run in enumerate(runs, 1):
+            for key in ("none__aria_loop", "aria__aria_loop"):
+                p = run["paired_all"][key]
+                x, y = key.split("__")
+                b, c = p[f"{y}_only"], p[f"{x}_only"]
+                prow.append([tap, f"{model}{f' lần {i}' if len(runs) > 1 else ''}", f"{x} → {y}", f"{b} / {c}", _p(b, c)])
+    r.table("So sánh theo cặp (McNemar chính xác)", ["Tập", "Model", "Cặp", "Chỉ sau / chỉ trước đạt", "p"], prow,
+            [2.4, 3.6, 3.4, 3.6, 2], center_cols=(3, 4))
+    if vac_ho:
+        weak = set(vac_ho.get("oracle", []))
+        lines = []
+        for model, v in vac_ho.items():
+            if model == "oracle":
+                continue
+            llm = sorted(set(v) - weak)
+            lines.append(f"{model}: {', '.join(llm) if llm else 'không có'}")
+        r.p(f"Kiểm tra assertion rỗng trên tập độc lập: oracle viết tay rỗng ở {', '.join(sorted(weak)) or 'không target nào'} "
+            "(thông báo lỗi nằm sẵn trong DOM, chỉ bị ẩn bằng CSS), tức target yếu từ gốc. Ngoài target đó, assertion rỗng "
+            "do LLM ở nhánh aria_loop: " + "; ".join(lines) + ".")
+    for para in notes.RQ2_MODELS_HELDOUT:
+        r.p(para)
+
+
+def rq3_models_heldout(r, sets: list[tuple[str, dict | None]], notes):
+    """sets: [(tên tập, kết quả run_rq3)]."""
+    r.h3("5.3.1 Model khác và mutation độc lập")
+    sets = [s for s in sets if s[1]]
+    if not sets:
+        r.p("Chưa có kết quả.")
+        return
+    r.p("Harness RQ3 được chạy thêm với Claude Sonnet 5 trên 14 mutation phát triển, và với cả hai model trên 8 mutation "
+        "độc lập thêm sau khi chốt hệ thống (T9–T12 kỹ thuật, S7–S10 nghiệp vụ, Bảng 4.1). Các mutation mới chạm vào "
+        "những phần tập cũ không có: liên kết giỏ hàng, nhãn form checkout, id của khối báo lỗi, liên kết đăng xuất, giá "
+        "hiển thị, bộ đếm giỏ hàng và lưu hồ sơ. Một test fail ở bước kiểm ban đầu rồi pass lại mà không có thay đổi nào "
+        "được áp dụng được ghi là chập chờn và loại khỏi phép đếm (1 ca, R20 dưới S9 ở lượt Claude).")
+    rows = []
+    for name, res in sets:
+        for arm, v in res["summary"].items():
+            rows.append([name, res["model"], arm, f"{v['tech_repaired']}/{v['tech_n']}", f"{v['sem_masked']}/{v['sem_n']}",
+                         str(v["escalated"]), str(v["weakened"])])
+    r.table("Kết quả RQ3 theo model và tập mutation",
+            ["Tập", "Model", "Nhánh", "Kỹ thuật sửa được", "Nghiệp vụ bị che", "Escalate", "Làm yếu"], rows,
+            [2.4, 3, 2.8, 2.4, 2.4, 1.6, 1.6], center_cols=(3, 4, 5, 6))
+    for para in notes.RQ3_MODELS_HELDOUT:
+        r.p(para)

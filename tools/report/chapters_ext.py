@@ -98,7 +98,8 @@ def shoplab_section(r):
         "giỏ hàng, checkout và hồ sơ. Mọi id, nhãn, placeholder, chữ trên nút, thông báo và cờ hành vi đọc từ cấu hình "
         "của biến thể. Mỗi biến thể là phiên bản gốc v0 cộng một nhóm thay đổi, có nhãn ground truth (Bảng 4.1).")
     rows = [[name, v["kind"], v["desc"]] for name, v in VARIANTS.items() if name != "v0"]
-    r.table("Mười bốn biến thể (mutation) của ShopLab", ["Biến thể", "Lớp", "Thay đổi"], rows, [3.6, 2.4, 10], center_cols=(1,))
+    r.table(f"{len(rows)} biến thể (mutation) của ShopLab; T9–T12 và S7–S10 là tập độc lập", ["Biến thể", "Lớp", "Thay đổi"],
+            rows, [3.6, 2.4, 10], center_cols=(1,))
     r.p("Lớp technical là refactor giao diện, nghiệp vụ giữ nguyên: hành vi đúng của cơ chế sửa là tìm lại phần tử, test "
         "pass, assertion giữ nguyên. Lớp semantic là thay đổi hành vi nghiệp vụ, tương đương một bug thật: test fail là "
         "đúng, và hành vi đúng của cơ chế sửa là không được làm test pass. Bộ test gồm 20 test viết cho v0, cố ý dùng trộn "
