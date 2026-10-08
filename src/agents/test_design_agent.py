@@ -22,6 +22,9 @@ QUY TẮC BẮT BUỘC:
 - Mỗi test case gồm: title, type, preconditions, steps (mỗi step có action và expected),
   expected_result.
 - KHÔNG tạo expected_result vượt quá phạm vi requirement đã duyệt.
+- negative / error_guessing / alternative_flow: CHỈ sinh khi requirement NÊU hệ thống phản ứng thế nào trong trường
+  hợp đó (vd "sai thì hiển thị lỗi", "quá 5 cuốn thì từ chối"). Requirement không nói thì KHÔNG tự đặt kết quả
+  mong đợi — bỏ qua case đó (chỗ thiếu này thuộc về làm rõ yêu cầu, không phải test).
 - Bám actor/precondition/action/expected_outcome của requirement.
 - Hệ thống TỰ bổ sung case biên (boundary) từ ràng buộc SỐ; hãy tập trung positive và
   negative theo ngữ nghĩa, không cần liệt kê từng giá trị biên số.

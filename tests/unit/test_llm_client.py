@@ -29,8 +29,9 @@ class _FakeCompletions:
         self.error_msg = error_msg
         self.calls = []
 
-    def create(self, *, model, messages, response_format, temperature):
+    def create(self, *, model, messages, response_format, **kw):
         self.calls.append(response_format["type"])
+        self.last = {"response_format": response_format, **kw}
         if response_format["type"] in self.fail_types:
             raise RuntimeError(self.error_msg)
         msg = types.SimpleNamespace(content='{"a": 7, "b": "ok"}')
@@ -91,3 +92,15 @@ def test_non_response_format_error_propagates():
     llm = OpenAILLMClient("m", "k", client=client)
     with pytest.raises(RuntimeError, match="rate limit"):
         llm.structured_completion("sys", "usr", _Toy)
+
+
+def test_anthropic_uses_strict_closed_schema_without_temperature():
+    client = _FakeClient()
+    llm = OpenAILLMClient("claude-sonnet-5", "k", base_url="https://api.anthropic.com/v1/", client=client)
+    assert llm.structured_completion("sys", "usr", _Toy) == _Toy(a=7, b="ok")
+    sent = client.chat.completions.last
+    assert "temperature" not in sent
+    assert sent["response_format"]["json_schema"]["strict"] is True
+    assert sent["response_format"]["json_schema"]["schema"]["additionalProperties"] is False
+    OpenAILLMClient("m", "k", client=client).structured_completion("sys", "usr", _Toy)
+    assert client.chat.completions.last["temperature"] == 0  # provider khác giữ nguyên

@@ -1,6 +1,8 @@
 """Sinh script Playwright Python (self-contained) từ PlaywrightPlan qua jinja2."""
 from __future__ import annotations
 
+import json
+
 import jinja2
 
 from src.models.playwright_artifacts import ActionType, LocatorStrategy, PlaywrightPlan
@@ -9,13 +11,16 @@ _SKELETON = jinja2.Template(
     """\
 from playwright.sync_api import sync_playwright, expect
 
+expect.set_options(timeout=10_000)  # trang demo có phần tử chờ ~5s (dynamic_loading)
 
 def run():
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.chromium.launch(args=["--disable-http2"])  # HTTP/2 tới heroku bị treo ở một số mạng
         page = browser.new_page()
+        page.set_default_timeout(10_000)  # thao tác (click/fill); điều hướng giữ 30s
+        page.set_default_navigation_timeout(30_000)
         {{ body }}
-        page.screenshot(path="{{ screenshot }}")
+        page.screenshot(path={{ screenshot }})
         browser.close()
 
 
@@ -26,38 +31,52 @@ if __name__ == "__main__":
 )
 
 
+def _lit(value) -> str:
+    """Chuỗi do LLM/người dùng sinh -> literal Python an toàn (escape dấu nháy, backslash, xuống dòng).
+
+    Chèn thẳng "{value}" thì giá trị có dấu nháy làm hỏng cú pháp, tệ hơn là cho phép chèn mã vào script sẽ được chạy.
+    """
+    return json.dumps(value or "", ensure_ascii=False)
+
+
 def _locator_expr(action) -> str:
+    base = _base_locator_expr(action)
+    return f"{base}.nth({action.nth})" if action.nth >= 0 else base
+
+
+def _base_locator_expr(action) -> str:
     s = action.strategy
     if s == LocatorStrategy.ROLE:
-        return f'page.get_by_role("{action.value}", name="{action.role_name}")'
+        name = f", name={_lit(action.role_name)}" if action.role_name else ""  # khớp build_locator khi grounding
+        return f"page.get_by_role({_lit(action.value)}{name})"
     if s == LocatorStrategy.LABEL:
-        return f'page.get_by_label("{action.value}")'
+        return f'page.get_by_label({_lit(action.value)})'
     if s == LocatorStrategy.PLACEHOLDER:
-        return f'page.get_by_placeholder("{action.value}")'
+        return f'page.get_by_placeholder({_lit(action.value)})'
     if s == LocatorStrategy.TEXT:
-        return f'page.get_by_text("{action.value}")'
+        return f'page.get_by_text({_lit(action.value)})'
     if s == LocatorStrategy.TEST_ID:
-        return f'page.get_by_test_id("{action.value}")'
-    return f'page.locator("{action.value}")'
+        return f'page.get_by_test_id({_lit(action.value)})'
+    return f'page.locator({_lit(action.value)})'
 
 
 def _action_line(action) -> str:
     t = action.type
     if t == ActionType.GOTO:
-        return f'page.goto("{action.arg}")'
+        return f'page.goto({_lit(action.arg)})'
     if t == ActionType.FILL:
-        return f'{_locator_expr(action)}.fill("{action.arg}")'
+        return f'{_locator_expr(action)}.fill({_lit(action.arg)})'
     if t == ActionType.CLICK:
         return f"{_locator_expr(action)}.click()"
     if t == ActionType.EXPECT_URL:
-        return f'expect(page).to_have_url("{action.arg}")'
+        return f'expect(page).to_have_url({_lit(action.arg)})'
     if t == ActionType.EXPECT_VISIBLE:
         return f"expect({_locator_expr(action)}).to_be_visible()"
     if t == ActionType.EXPECT_TEXT:
-        return f'expect({_locator_expr(action)}).to_contain_text("{action.arg}")'
+        return f'expect({_locator_expr(action)}).to_contain_text({_lit(action.arg)})'
     raise ValueError(f"action type không hỗ trợ: {action.type}")
 
 
 def render_script(plan: PlaywrightPlan, screenshot: str = "screenshot.png") -> str:
     body = "\n        ".join(_action_line(a) for a in plan.actions)
-    return _SKELETON.render(body=body, screenshot=screenshot)
+    return _SKELETON.render(body=body, screenshot=_lit(screenshot))

@@ -1,14 +1,14 @@
 {
   "model": "deepseek-chat",
-  "n_cases": 5,
-  "n_gold_reqs": 15,
-  "n_pred_reqs": 15,
-  "count_mismatches": 0,
-  "clean_reqs": 5,
-  "overflag_clean": 1,
+  "n_cases": 15,
+  "n_gold_reqs": 47,
+  "n_pred_reqs": 48,
+  "count_mismatches": 1,
+  "clean_reqs": 23,
+  "overflag_clean": 5,
   "by_type": {
     "conflict": {
-      "tp": 1,
+      "tp": 3,
       "fp": 0,
       "fn": 0,
       "precision": 1.0,
@@ -16,39 +16,39 @@
       "f1": 1.0
     },
     "missing_actor": {
-      "tp": 3,
-      "fp": 1,
+      "tp": 6,
+      "fp": 6,
       "fn": 0,
-      "precision": 0.75,
+      "precision": 0.5,
       "recall": 1.0,
-      "f1": 0.857
+      "f1": 0.667
     },
     "missing_expected_outcome": {
-      "tp": 3,
-      "fp": 4,
-      "fn": 0,
-      "precision": 0.429,
-      "recall": 1.0,
+      "tp": 9,
+      "fp": 10,
+      "fn": 2,
+      "precision": 0.474,
+      "recall": 0.818,
       "f1": 0.6
     },
     "missing_precondition": {
       "tp": 1,
-      "fp": 2,
+      "fp": 9,
       "fn": 0,
-      "precision": 0.333,
+      "precision": 0.1,
       "recall": 1.0,
-      "f1": 0.5
+      "f1": 0.182
     },
     "underspecified_action": {
       "tp": 1,
-      "fp": 5,
-      "fn": 0,
-      "precision": 0.167,
-      "recall": 1.0,
-      "f1": 0.286
+      "fp": 11,
+      "fn": 1,
+      "precision": 0.083,
+      "recall": 0.5,
+      "f1": 0.143
     },
     "vague_quantifier": {
-      "tp": 3,
+      "tp": 8,
       "fp": 0,
       "fn": 0,
       "precision": 1.0,
@@ -57,12 +57,12 @@
     }
   },
   "micro": {
-    "tp": 12,
-    "fp": 12,
-    "fn": 0,
-    "precision": 0.5,
-    "recall": 1.0,
-    "f1": 0.667
+    "tp": 28,
+    "fp": 36,
+    "fn": 3,
+    "precision": 0.438,
+    "recall": 0.903,
+    "f1": 0.589
   },
-  "macro_f1": 0.707
+  "macro_f1": 0.599
 }

@@ -41,18 +41,22 @@ def _plan_diff(old_plan: PlaywrightPlan, new_plan: PlaywrightPlan) -> str:
 
 
 class RepairAgent:
-    def __init__(self, llm: LLMClient | None = None, model_name: str = "unknown"):
+    def __init__(self, llm: LLMClient | None = None, model_name: str = "unknown", system_prompt: str = SYSTEM_PROMPT):
+        """system_prompt: đổi được để dựng baseline sửa không ràng buộc (RQ3); mặc định là prompt có ràng buộc."""
         self._llm = llm
         self._model_name = model_name
+        self._system_prompt = system_prompt
 
     def propose(self, old_plan: PlaywrightPlan, execution_result: ExecutionResult,
-                test_case: TestCase, attempt: int = 1, budget: int = 2) -> RepairProposal:
+                test_case: TestCase, attempt: int = 1, budget: int = 2,
+                page_context: str | None = None) -> RepairProposal:
+        """page_context: bằng chứng DOM tại bước lỗi (aria snapshot + ghi chú), nếu có."""
         not_needed = self._not_needed_if_passed(execution_result, test_case)
         if not_needed is not None:
             return not_needed
 
-        user_prompt = self._build_user_prompt(old_plan, execution_result, test_case)
-        draft = self._llm.structured_completion(SYSTEM_PROMPT, user_prompt, RepairDraft)
+        user_prompt = self._build_user_prompt(old_plan, execution_result, test_case, page_context)
+        draft = self._llm.structured_completion(self._system_prompt, user_prompt, RepairDraft)
         return self._build_proposal(old_plan, draft.new_plan, draft.failure_type, draft.reason,
                                     execution_result, test_case, attempt, budget)
 
@@ -101,14 +105,19 @@ class RepairAgent:
             evidence=execution_result.artifacts,
             requires_approval=requires_approval,
             outcome=outcome,
+            new_plan=new_plan,
         )
 
     @staticmethod
-    def _build_user_prompt(old_plan: PlaywrightPlan, execution_result: ExecutionResult, test_case: TestCase) -> str:
-        return (
+    def _build_user_prompt(old_plan: PlaywrightPlan, execution_result: ExecutionResult, test_case: TestCase,
+                           page_context: str | None = None) -> str:
+        prompt = (
             f"Test case: {test_case.title}\n"
+            f"Kết quả mong đợi (đã duyệt): {test_case.expected_result or '—'}\n"
             f"Trạng thái: {execution_result.status.value} (exit {execution_result.exit_code})\n"
             f"stderr:\n{execution_result.stderr[-800:]}\n\n"
-            f"Plan hiện tại (JSON):\n{old_plan.model_dump_json(indent=2)}\n\n"
-            "Đề xuất plan sửa TỐI THIỂU. KHÔNG xoá/làm yếu assertion để test pass."
+            f"Plan hiện tại (JSON):\n{old_plan.model_dump_json(indent=2)}\n"
         )
+        if page_context:
+            prompt += f"\nBằng chứng DOM tại bước lỗi:\n{page_context}\n"
+        return prompt + "\nĐề xuất plan sửa."

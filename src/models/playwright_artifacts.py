@@ -31,6 +31,7 @@ class PlaywrightAction(BaseModel):
     value: str = ""       # giá trị locator (css/text/placeholder/label/testid) hoặc role
     role_name: str = ""   # accessible name khi strategy=role
     arg: str = ""         # fill text / url / expected text
+    nth: int = -1         # >= 0: chọn phần tử thứ nth (0-based) khi locator khớp nhiều phần tử giống nhau
 
 
 class PlaywrightPlan(BaseModel):
@@ -45,6 +46,7 @@ class GroundingRecord(BaseModel):
     value: str
     matched_count: int
     ok: bool
+    snapshot: str = ""  # aria snapshot tại bước khi khớp != 1 (chỉ khi được yêu cầu)
 
 
 class GeneratedScript(BaseModel):

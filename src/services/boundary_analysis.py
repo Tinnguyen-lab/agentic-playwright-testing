@@ -42,14 +42,16 @@ def parse_bounds(constraint: str) -> list[dict]:
     return []
 
 
-def _case(value: int, ttype: TestType, label: str, unit: str, excerpt: str) -> TestCase:
+def _case(value: int, ttype: TestType, label: str, unit: str, excerpt: str, req: StructuredRequirement) -> TestCase:
+    """Ca biên gắn với hành động của yêu cầu (không chỉ "nhập giá trị N") để người đọc và giám khảo biết nó kiểm gì."""
     u = f" {unit}" if unit else ""
-    verb = "chấp nhận" if ttype == TestType.BOUNDARY else "bị từ chối"
+    verb = "được chấp nhận" if ttype == TestType.BOUNDARY else "bị từ chối"
     return TestCase(
-        title=f"{label}: giá trị {value}{u}",
+        title=f"{label}: giá trị {value}{u} — {req.title}",
         type=ttype,
-        steps=[TestStep(action=f"Nhập giá trị {value}{u}", expected=f"Hệ thống {verb}")],
-        expected_result=f"{value}{u} — {verb} (ràng buộc: {excerpt})",
+        preconditions=[req.precondition] if req.precondition else [],
+        steps=[TestStep(action=f"{req.action} với giá trị {value}{u} (ràng buộc: {excerpt})", expected=f"Hệ thống {verb}")],
+        expected_result=f"Thao tác \"{req.action}\" với giá trị {value}{u} {verb}, theo ràng buộc: {excerpt}",
         source_excerpt=excerpt,
     )
 
@@ -72,5 +74,5 @@ def derive_boundary_cases(requirement: StructuredRequirement) -> list[TestCase]:
                 if key in seen:
                     continue
                 seen.add(key)
-                cases.append(_case(value, ttype, label, b["unit"], b["excerpt"]))
+                cases.append(_case(value, ttype, label, b["unit"], b["excerpt"], requirement))
     return cases

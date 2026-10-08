@@ -1,65 +1,1871 @@
 {
-  "_note": "Catalog target cho RQ2 (first-run pass rate của script do LLM sinh). Mỗi mục: 1 kịch bản trên 1 URL thật, có expected_result mô tả kết quả THẬT của trang để LLM sinh assertion đúng. Mở rộng dần tới >=50. Nhóm nên review lại expected_result.",
+  "_note": "Catalog target cho RQ2 (first-run pass rate của script do LLM sinh): 50 target, 6 site. Mỗi mục: 1 kịch bản trên 1 URL thật, expected_result mô tả kết quả THẬT của trang. `oracle` = plan viết tay bằng đúng DSL (goto/fill/click/expect_*) chứng minh target khả thi và expected_result đúng; chạy `python run_rq2.py --context oracle` để kiểm chứng lại (không gửi cho LLM).",
   "targets": [
-    {"id": "SD-01", "site": "saucedemo", "url": "https://www.saucedemo.com/", "type": "positive",
-     "steps": ["Nhập username 'standard_user' và password 'secret_sauce'", "Bấm nút Login"],
-     "expected_result": "Đăng nhập thành công, URL là https://www.saucedemo.com/inventory.html"},
-    {"id": "SD-02", "site": "saucedemo", "url": "https://www.saucedemo.com/", "type": "negative",
-     "steps": ["Nhập username 'standard_user' và password 'wrong_password'", "Bấm Login"],
-     "expected_result": "Hiện thông báo lỗi chứa 'Username and password do not match'"},
-    {"id": "SD-03", "site": "saucedemo", "url": "https://www.saucedemo.com/", "type": "negative",
-     "steps": ["Nhập username 'locked_out_user' và password 'secret_sauce'", "Bấm Login"],
-     "expected_result": "Hiện thông báo chứa 'Sorry, this user has been locked out'"},
-    {"id": "SD-04", "site": "saucedemo", "url": "https://www.saucedemo.com/", "type": "negative",
-     "steps": ["Không nhập gì", "Bấm nút Login"],
-     "expected_result": "Hiện thông báo chứa 'Username is required'"},
-    {"id": "SD-05", "site": "saucedemo", "url": "https://www.saucedemo.com/", "type": "negative",
-     "steps": ["Nhập username 'standard_user', bỏ trống password", "Bấm Login"],
-     "expected_result": "Hiện thông báo chứa 'Password is required'"},
-    {"id": "SD-06", "site": "saucedemo", "url": "https://www.saucedemo.com/", "type": "positive",
-     "steps": ["Nhập username 'problem_user' và password 'secret_sauce'", "Bấm Login"],
-     "expected_result": "Đăng nhập thành công, URL là https://www.saucedemo.com/inventory.html"},
-    {"id": "SD-07", "site": "saucedemo", "url": "https://www.saucedemo.com/", "type": "positive",
-     "steps": ["Nhập username 'performance_glitch_user' và password 'secret_sauce'", "Bấm Login"],
-     "expected_result": "Đăng nhập thành công, URL là https://www.saucedemo.com/inventory.html"},
-
-    {"id": "TI-01", "site": "the-internet", "url": "https://the-internet.herokuapp.com/login", "type": "positive",
-     "steps": ["Nhập username 'tomsmith' và password 'SuperSecretPassword!'", "Bấm nút Login"],
-     "expected_result": "Hiện thông báo chứa 'You logged into a secure area!'"},
-    {"id": "TI-02", "site": "the-internet", "url": "https://the-internet.herokuapp.com/login", "type": "negative",
-     "steps": ["Nhập username 'baduser' và password 'badpass'", "Bấm Login"],
-     "expected_result": "Hiện thông báo chứa 'Your username is invalid!'"},
-    {"id": "TI-03", "site": "the-internet", "url": "https://the-internet.herokuapp.com/add_remove_elements/", "type": "positive",
-     "steps": ["Bấm nút 'Add Element'"],
-     "expected_result": "Xuất hiện nút 'Delete' trên trang"},
-    {"id": "TI-04", "site": "the-internet", "url": "https://the-internet.herokuapp.com/dynamic_loading/1", "type": "positive",
-     "steps": ["Bấm nút 'Start'"],
-     "expected_result": "Sau khi tải xong hiện văn bản chứa 'Hello World!'"},
-    {"id": "TI-05", "site": "the-internet", "url": "https://the-internet.herokuapp.com/dynamic_loading/2", "type": "positive",
-     "steps": ["Bấm nút 'Start'"],
-     "expected_result": "Sau khi tải xong hiện văn bản chứa 'Hello World!'"},
-    {"id": "TI-06", "site": "the-internet", "url": "https://the-internet.herokuapp.com/status_codes/200", "type": "positive",
-     "steps": ["Mở trang"],
-     "expected_result": "Trang hiện văn bản chứa 'This page returned a 200 status code'"},
-    {"id": "TI-07", "site": "the-internet", "url": "https://the-internet.herokuapp.com/status_codes/404", "type": "positive",
-     "steps": ["Mở trang"],
-     "expected_result": "Trang hiện văn bản chứa 'This page returned a 404 status code'"},
-
-    {"id": "PT-01", "site": "practicetestautomation", "url": "https://practicetestautomation.com/practice-test-login/", "type": "positive",
-     "steps": ["Nhập username 'student' và password 'Password123'", "Bấm nút Submit"],
-     "expected_result": "Hiện thông báo chứa 'Logged In Successfully'"},
-    {"id": "PT-02", "site": "practicetestautomation", "url": "https://practicetestautomation.com/practice-test-login/", "type": "negative",
-     "steps": ["Nhập username 'incorrectUser' và password 'Password123'", "Bấm Submit"],
-     "expected_result": "Hiện thông báo chứa 'Your username is invalid!'"},
-    {"id": "PT-03", "site": "practicetestautomation", "url": "https://practicetestautomation.com/practice-test-login/", "type": "negative",
-     "steps": ["Nhập username 'student' và password 'wrongPassword'", "Bấm Submit"],
-     "expected_result": "Hiện thông báo chứa 'Your password is invalid!'"},
-
-    {"id": "OH-01", "site": "orangehrm", "url": "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", "type": "positive",
-     "steps": ["Nhập username 'Admin' và password 'admin123'", "Bấm nút Login"],
-     "expected_result": "Đăng nhập thành công, hiện tiêu đề 'Dashboard'"},
-    {"id": "OH-02", "site": "orangehrm", "url": "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login", "type": "negative",
-     "steps": ["Nhập username 'Admin' và password 'wrongpass'", "Bấm Login"],
-     "expected_result": "Hiện thông báo chứa 'Invalid credentials'"}
+    {
+      "id": "SD-01",
+      "site": "saucedemo",
+      "url": "https://www.saucedemo.com/",
+      "type": "positive",
+      "steps": [
+        "Nhập username 'standard_user' và password 'secret_sauce'",
+        "Bấm nút Login"
+      ],
+      "expected_result": "Đăng nhập thành công, URL là https://www.saucedemo.com/inventory.html",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://www.saucedemo.com/"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Username",
+          "arg": "standard_user"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Password",
+          "arg": "secret_sauce"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "expect_url",
+          "arg": "https://www.saucedemo.com/inventory.html"
+        }
+      ]
+    },
+    {
+      "id": "SD-02",
+      "site": "saucedemo",
+      "url": "https://www.saucedemo.com/",
+      "type": "negative",
+      "steps": [
+        "Nhập username 'standard_user' và password 'wrong_password'",
+        "Bấm Login"
+      ],
+      "expected_result": "Hiện thông báo lỗi chứa 'Username and password do not match'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://www.saucedemo.com/"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Username",
+          "arg": "standard_user"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Password",
+          "arg": "wrong_password"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "[data-test='error']",
+          "arg": "Username and password do not match"
+        }
+      ]
+    },
+    {
+      "id": "SD-03",
+      "site": "saucedemo",
+      "url": "https://www.saucedemo.com/",
+      "type": "negative",
+      "steps": [
+        "Nhập username 'locked_out_user' và password 'secret_sauce'",
+        "Bấm Login"
+      ],
+      "expected_result": "Hiện thông báo chứa 'Sorry, this user has been locked out'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://www.saucedemo.com/"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Username",
+          "arg": "locked_out_user"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Password",
+          "arg": "secret_sauce"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "[data-test='error']",
+          "arg": "Sorry, this user has been locked out"
+        }
+      ]
+    },
+    {
+      "id": "SD-04",
+      "site": "saucedemo",
+      "url": "https://www.saucedemo.com/",
+      "type": "negative",
+      "steps": [
+        "Không nhập gì",
+        "Bấm nút Login"
+      ],
+      "expected_result": "Hiện thông báo chứa 'Username is required'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://www.saucedemo.com/"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "[data-test='error']",
+          "arg": "Username is required"
+        }
+      ]
+    },
+    {
+      "id": "SD-05",
+      "site": "saucedemo",
+      "url": "https://www.saucedemo.com/",
+      "type": "negative",
+      "steps": [
+        "Nhập username 'standard_user', bỏ trống password",
+        "Bấm Login"
+      ],
+      "expected_result": "Hiện thông báo chứa 'Password is required'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://www.saucedemo.com/"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Username",
+          "arg": "standard_user"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "[data-test='error']",
+          "arg": "Password is required"
+        }
+      ]
+    },
+    {
+      "id": "SD-06",
+      "site": "saucedemo",
+      "url": "https://www.saucedemo.com/",
+      "type": "positive",
+      "steps": [
+        "Nhập username 'problem_user' và password 'secret_sauce'",
+        "Bấm Login"
+      ],
+      "expected_result": "Đăng nhập thành công, URL là https://www.saucedemo.com/inventory.html",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://www.saucedemo.com/"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Username",
+          "arg": "problem_user"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Password",
+          "arg": "secret_sauce"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "expect_url",
+          "arg": "https://www.saucedemo.com/inventory.html"
+        }
+      ]
+    },
+    {
+      "id": "SD-07",
+      "site": "saucedemo",
+      "url": "https://www.saucedemo.com/",
+      "type": "positive",
+      "steps": [
+        "Nhập username 'performance_glitch_user' và password 'secret_sauce'",
+        "Bấm Login"
+      ],
+      "expected_result": "Đăng nhập thành công, URL là https://www.saucedemo.com/inventory.html",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://www.saucedemo.com/"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Username",
+          "arg": "performance_glitch_user"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Password",
+          "arg": "secret_sauce"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "expect_url",
+          "arg": "https://www.saucedemo.com/inventory.html"
+        }
+      ]
+    },
+    {
+      "id": "TI-01",
+      "site": "the-internet",
+      "url": "https://the-internet.herokuapp.com/login",
+      "type": "positive",
+      "steps": [
+        "Nhập username 'tomsmith' và password 'SuperSecretPassword!'",
+        "Bấm nút Login"
+      ],
+      "expected_result": "Hiện thông báo chứa 'You logged into a secure area!'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://the-internet.herokuapp.com/login"
+        },
+        {
+          "type": "fill",
+          "strategy": "label",
+          "value": "Username",
+          "arg": "tomsmith"
+        },
+        {
+          "type": "fill",
+          "strategy": "label",
+          "value": "Password",
+          "arg": "SuperSecretPassword!"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#flash",
+          "arg": "You logged into a secure area!"
+        }
+      ]
+    },
+    {
+      "id": "TI-02",
+      "site": "the-internet",
+      "url": "https://the-internet.herokuapp.com/login",
+      "type": "negative",
+      "steps": [
+        "Nhập username 'baduser' và password 'badpass'",
+        "Bấm Login"
+      ],
+      "expected_result": "Hiện thông báo chứa 'Your username is invalid!'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://the-internet.herokuapp.com/login"
+        },
+        {
+          "type": "fill",
+          "strategy": "label",
+          "value": "Username",
+          "arg": "baduser"
+        },
+        {
+          "type": "fill",
+          "strategy": "label",
+          "value": "Password",
+          "arg": "badpass"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#flash",
+          "arg": "Your username is invalid!"
+        }
+      ]
+    },
+    {
+      "id": "TI-03",
+      "site": "the-internet",
+      "url": "https://the-internet.herokuapp.com/add_remove_elements/",
+      "type": "positive",
+      "steps": [
+        "Bấm nút 'Add Element'"
+      ],
+      "expected_result": "Xuất hiện nút 'Delete' trên trang",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://the-internet.herokuapp.com/add_remove_elements/"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Add Element"
+        },
+        {
+          "type": "expect_visible",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Delete"
+        }
+      ]
+    },
+    {
+      "id": "TI-04",
+      "site": "the-internet",
+      "url": "https://the-internet.herokuapp.com/dynamic_loading/1",
+      "type": "positive",
+      "steps": [
+        "Bấm nút 'Start'"
+      ],
+      "expected_result": "Sau khi tải xong hiện văn bản chứa 'Hello World!'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://the-internet.herokuapp.com/dynamic_loading/1"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Start"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#finish",
+          "arg": "Hello World!"
+        }
+      ]
+    },
+    {
+      "id": "TI-05",
+      "site": "the-internet",
+      "url": "https://the-internet.herokuapp.com/dynamic_loading/2",
+      "type": "positive",
+      "steps": [
+        "Bấm nút 'Start'"
+      ],
+      "expected_result": "Sau khi tải xong hiện văn bản chứa 'Hello World!'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://the-internet.herokuapp.com/dynamic_loading/2"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Start"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#finish",
+          "arg": "Hello World!"
+        }
+      ]
+    },
+    {
+      "id": "TI-06",
+      "site": "the-internet",
+      "url": "https://the-internet.herokuapp.com/status_codes/200",
+      "type": "positive",
+      "steps": [
+        "Mở trang"
+      ],
+      "expected_result": "Trang hiện văn bản chứa 'This page returned a 200 status code'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://the-internet.herokuapp.com/status_codes/200"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "text",
+          "value": "This page returned a 200 status code",
+          "arg": "This page returned a 200 status code"
+        }
+      ]
+    },
+    {
+      "id": "TI-07",
+      "site": "the-internet",
+      "url": "https://the-internet.herokuapp.com/status_codes/404",
+      "type": "positive",
+      "steps": [
+        "Mở trang"
+      ],
+      "expected_result": "Trang hiện văn bản chứa 'This page returned a 404 status code'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://the-internet.herokuapp.com/status_codes/404"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "text",
+          "value": "This page returned a 404 status code",
+          "arg": "This page returned a 404 status code"
+        }
+      ]
+    },
+    {
+      "id": "PT-01",
+      "site": "practicetestautomation",
+      "url": "https://practicetestautomation.com/practice-test-login/",
+      "type": "positive",
+      "steps": [
+        "Nhập username 'student' và password 'Password123'",
+        "Bấm nút Submit"
+      ],
+      "expected_result": "Hiện thông báo chứa 'Logged In Successfully'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://practicetestautomation.com/practice-test-login/"
+        },
+        {
+          "type": "fill",
+          "strategy": "label",
+          "value": "Username",
+          "arg": "student"
+        },
+        {
+          "type": "fill",
+          "strategy": "label",
+          "value": "Password",
+          "arg": "Password123"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Submit"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "role",
+          "value": "heading",
+          "role_name": "Logged In Successfully",
+          "arg": "Logged In Successfully"
+        }
+      ]
+    },
+    {
+      "id": "PT-02",
+      "site": "practicetestautomation",
+      "url": "https://practicetestautomation.com/practice-test-login/",
+      "type": "negative",
+      "steps": [
+        "Nhập username 'incorrectUser' và password 'Password123'",
+        "Bấm Submit"
+      ],
+      "expected_result": "Hiện thông báo chứa 'Your username is invalid!'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://practicetestautomation.com/practice-test-login/"
+        },
+        {
+          "type": "fill",
+          "strategy": "label",
+          "value": "Username",
+          "arg": "incorrectUser"
+        },
+        {
+          "type": "fill",
+          "strategy": "label",
+          "value": "Password",
+          "arg": "Password123"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Submit"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#error",
+          "arg": "Your username is invalid!"
+        }
+      ]
+    },
+    {
+      "id": "PT-03",
+      "site": "practicetestautomation",
+      "url": "https://practicetestautomation.com/practice-test-login/",
+      "type": "negative",
+      "steps": [
+        "Nhập username 'student' và password 'wrongPassword'",
+        "Bấm Submit"
+      ],
+      "expected_result": "Hiện thông báo chứa 'Your password is invalid!'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://practicetestautomation.com/practice-test-login/"
+        },
+        {
+          "type": "fill",
+          "strategy": "label",
+          "value": "Username",
+          "arg": "student"
+        },
+        {
+          "type": "fill",
+          "strategy": "label",
+          "value": "Password",
+          "arg": "wrongPassword"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Submit"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#error",
+          "arg": "Your password is invalid!"
+        }
+      ]
+    },
+    {
+      "id": "OH-01",
+      "site": "orangehrm",
+      "url": "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login",
+      "type": "positive",
+      "steps": [
+        "Nhập username 'Admin' và password 'admin123'",
+        "Bấm nút Login"
+      ],
+      "expected_result": "Đăng nhập thành công, hiện tiêu đề 'Dashboard'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Username",
+          "arg": "Admin"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Password",
+          "arg": "admin123"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "expect_visible",
+          "strategy": "role",
+          "value": "heading",
+          "role_name": "Dashboard"
+        }
+      ]
+    },
+    {
+      "id": "OH-02",
+      "site": "orangehrm",
+      "url": "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login",
+      "type": "negative",
+      "steps": [
+        "Nhập username 'Admin' và password 'wrongpass'",
+        "Bấm Login"
+      ],
+      "expected_result": "Hiện thông báo chứa 'Invalid credentials'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Username",
+          "arg": "Admin"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Password",
+          "arg": "wrongpass"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "text",
+          "value": "Invalid credentials",
+          "arg": "Invalid credentials"
+        }
+      ]
+    },
+    {
+      "id": "TI-08",
+      "site": "the-internet",
+      "url": "https://the-internet.herokuapp.com/javascript_alerts",
+      "type": "positive",
+      "steps": [
+        "Bấm nút 'Click for JS Alert' (hộp thoại alert được đóng)"
+      ],
+      "expected_result": "Mục Result hiện văn bản chứa 'You successfully clicked an alert'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://the-internet.herokuapp.com/javascript_alerts"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Click for JS Alert"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#result",
+          "arg": "You successfully clicked an alert"
+        }
+      ]
+    },
+    {
+      "id": "TI-09",
+      "site": "the-internet",
+      "url": "https://the-internet.herokuapp.com/javascript_alerts",
+      "type": "positive",
+      "steps": [
+        "Bấm nút 'Click for JS Confirm'",
+        "Hộp thoại xác nhận bị đóng (tương đương Cancel)"
+      ],
+      "expected_result": "Mục Result hiện văn bản chứa 'You clicked: Cancel'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://the-internet.herokuapp.com/javascript_alerts"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Click for JS Confirm"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#result",
+          "arg": "You clicked: Cancel"
+        }
+      ]
+    },
+    {
+      "id": "TI-10",
+      "site": "the-internet",
+      "url": "https://the-internet.herokuapp.com/dynamic_controls",
+      "type": "positive",
+      "steps": [
+        "Bấm nút 'Remove' ở mục Remove/add"
+      ],
+      "expected_result": "Sau khi xử lý xong hiện thông báo chứa \"It's gone!\"",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://the-internet.herokuapp.com/dynamic_controls"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Remove"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#message",
+          "arg": "It's gone!"
+        }
+      ]
+    },
+    {
+      "id": "TI-11",
+      "site": "the-internet",
+      "url": "https://the-internet.herokuapp.com/dynamic_controls",
+      "type": "positive",
+      "steps": [
+        "Bấm nút 'Enable' ở mục Enable/disable"
+      ],
+      "expected_result": "Sau khi xử lý xong hiện thông báo chứa \"It's enabled!\"",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://the-internet.herokuapp.com/dynamic_controls"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Enable"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#message",
+          "arg": "It's enabled!"
+        }
+      ]
+    },
+    {
+      "id": "TI-12",
+      "site": "the-internet",
+      "url": "https://the-internet.herokuapp.com/status_codes/500",
+      "type": "positive",
+      "steps": [
+        "Mở trang"
+      ],
+      "expected_result": "Trang hiện văn bản chứa 'This page returned a 500 status code'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://the-internet.herokuapp.com/status_codes/500"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "text",
+          "value": "This page returned a 500 status code",
+          "arg": "This page returned a 500 status code"
+        }
+      ]
+    },
+    {
+      "id": "TI-13",
+      "site": "the-internet",
+      "url": "https://the-internet.herokuapp.com/login",
+      "type": "negative",
+      "steps": [
+        "Để trống username và password",
+        "Bấm nút Login"
+      ],
+      "expected_result": "Hiện thông báo chứa 'Your username is invalid!'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://the-internet.herokuapp.com/login"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#flash",
+          "arg": "Your username is invalid!"
+        }
+      ]
+    },
+    {
+      "id": "TI-14",
+      "site": "the-internet",
+      "url": "https://the-internet.herokuapp.com/login",
+      "type": "negative",
+      "steps": [
+        "Nhập username 'tomsmith' và password 'wrongpass'",
+        "Bấm nút Login"
+      ],
+      "expected_result": "Hiện thông báo chứa 'Your password is invalid!'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://the-internet.herokuapp.com/login"
+        },
+        {
+          "type": "fill",
+          "strategy": "label",
+          "value": "Username",
+          "arg": "tomsmith"
+        },
+        {
+          "type": "fill",
+          "strategy": "label",
+          "value": "Password",
+          "arg": "wrongpass"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#flash",
+          "arg": "Your password is invalid!"
+        }
+      ]
+    },
+    {
+      "id": "TI-15",
+      "site": "the-internet",
+      "url": "https://the-internet.herokuapp.com/login",
+      "type": "positive",
+      "steps": [
+        "Nhập username 'tomsmith' và password 'SuperSecretPassword!'",
+        "Bấm nút Login",
+        "Ở trang Secure Area bấm nút 'Logout'"
+      ],
+      "expected_result": "Quay về trang login và hiện thông báo chứa 'You logged out of the secure area!'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://the-internet.herokuapp.com/login"
+        },
+        {
+          "type": "fill",
+          "strategy": "label",
+          "value": "Username",
+          "arg": "tomsmith"
+        },
+        {
+          "type": "fill",
+          "strategy": "label",
+          "value": "Password",
+          "arg": "SuperSecretPassword!"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "link",
+          "role_name": "Logout"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#flash",
+          "arg": "You logged out of the secure area!"
+        }
+      ]
+    },
+    {
+      "id": "TI-16",
+      "site": "the-internet",
+      "url": "https://the-internet.herokuapp.com/redirector",
+      "type": "positive",
+      "steps": [
+        "Bấm liên kết 'here'"
+      ],
+      "expected_result": "Bị chuyển hướng, URL là https://the-internet.herokuapp.com/status_codes",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://the-internet.herokuapp.com/redirector"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "link",
+          "role_name": "here"
+        },
+        {
+          "type": "expect_url",
+          "arg": "https://the-internet.herokuapp.com/status_codes"
+        }
+      ]
+    },
+    {
+      "id": "SD-08",
+      "site": "saucedemo",
+      "url": "https://www.saucedemo.com/",
+      "type": "positive",
+      "steps": [
+        "Đăng nhập với username 'standard_user' và password 'secret_sauce'",
+        "Bấm 'Add to cart' ở sản phẩm 'Sauce Labs Backpack'"
+      ],
+      "expected_result": "Biểu tượng giỏ hàng hiện số '1'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://www.saucedemo.com/"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Username",
+          "arg": "standard_user"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Password",
+          "arg": "secret_sauce"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "click",
+          "strategy": "css",
+          "value": "[data-test='add-to-cart-sauce-labs-backpack']"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "[data-test='shopping-cart-badge']",
+          "arg": "1"
+        }
+      ]
+    },
+    {
+      "id": "SD-09",
+      "site": "saucedemo",
+      "url": "https://www.saucedemo.com/",
+      "type": "positive",
+      "steps": [
+        "Đăng nhập với username 'standard_user' và password 'secret_sauce'",
+        "Bấm 'Add to cart' ở sản phẩm 'Sauce Labs Backpack'",
+        "Bấm 'Remove' ở cùng sản phẩm đó"
+      ],
+      "expected_result": "Nút 'Add to cart' của 'Sauce Labs Backpack' hiện lại",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://www.saucedemo.com/"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Username",
+          "arg": "standard_user"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Password",
+          "arg": "secret_sauce"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "click",
+          "strategy": "css",
+          "value": "[data-test='add-to-cart-sauce-labs-backpack']"
+        },
+        {
+          "type": "click",
+          "strategy": "css",
+          "value": "[data-test='remove-sauce-labs-backpack']"
+        },
+        {
+          "type": "expect_visible",
+          "strategy": "css",
+          "value": "[data-test='add-to-cart-sauce-labs-backpack']"
+        }
+      ]
+    },
+    {
+      "id": "SD-10",
+      "site": "saucedemo",
+      "url": "https://www.saucedemo.com/",
+      "type": "positive",
+      "steps": [
+        "Đăng nhập với username 'standard_user' và password 'secret_sauce'",
+        "Bấm vào tên sản phẩm 'Sauce Labs Backpack'"
+      ],
+      "expected_result": "Mở trang chi tiết sản phẩm, mô tả chứa 'carry.allTheThings()'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://www.saucedemo.com/"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Username",
+          "arg": "standard_user"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Password",
+          "arg": "secret_sauce"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "click",
+          "strategy": "css",
+          "value": "[data-test='item-4-title-link']"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "text",
+          "value": "carry.allTheThings()",
+          "arg": "carry.allTheThings()"
+        }
+      ]
+    },
+    {
+      "id": "SD-11",
+      "site": "saucedemo",
+      "url": "https://www.saucedemo.com/",
+      "type": "negative",
+      "steps": [
+        "Đăng nhập với username 'standard_user' và password 'secret_sauce'",
+        "Thêm 'Sauce Labs Backpack' vào giỏ",
+        "Mở giỏ hàng, bấm 'Checkout'",
+        "Bỏ trống First Name, nhập Last Name 'Nguyen' và Zip '70000'",
+        "Bấm 'Continue'"
+      ],
+      "expected_result": "Hiện thông báo lỗi chứa 'Error: First Name is required'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://www.saucedemo.com/"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Username",
+          "arg": "standard_user"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Password",
+          "arg": "secret_sauce"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "click",
+          "strategy": "css",
+          "value": "[data-test='add-to-cart-sauce-labs-backpack']"
+        },
+        {
+          "type": "click",
+          "strategy": "css",
+          "value": "[data-test='shopping-cart-link']"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Checkout"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Last Name",
+          "arg": "Nguyen"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Zip/Postal Code",
+          "arg": "70000"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Continue"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "[data-test='error']",
+          "arg": "Error: First Name is required"
+        }
+      ]
+    },
+    {
+      "id": "SD-12",
+      "site": "saucedemo",
+      "url": "https://www.saucedemo.com/",
+      "type": "positive",
+      "steps": [
+        "Đăng nhập với username 'standard_user' và password 'secret_sauce'",
+        "Thêm 'Sauce Labs Backpack' vào giỏ",
+        "Mở giỏ hàng, bấm 'Checkout'",
+        "Nhập First Name 'An', Last Name 'Nguyen', Zip '70000', bấm 'Continue'",
+        "Bấm 'Finish'"
+      ],
+      "expected_result": "Hiện tiêu đề 'Thank you for your order!'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://www.saucedemo.com/"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Username",
+          "arg": "standard_user"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Password",
+          "arg": "secret_sauce"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "click",
+          "strategy": "css",
+          "value": "[data-test='add-to-cart-sauce-labs-backpack']"
+        },
+        {
+          "type": "click",
+          "strategy": "css",
+          "value": "[data-test='shopping-cart-link']"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Checkout"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "First Name",
+          "arg": "An"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Last Name",
+          "arg": "Nguyen"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Zip/Postal Code",
+          "arg": "70000"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Continue"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Finish"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "[data-test='complete-header']",
+          "arg": "Thank you for your order!"
+        }
+      ]
+    },
+    {
+      "id": "SD-13",
+      "site": "saucedemo",
+      "url": "https://www.saucedemo.com/",
+      "type": "positive",
+      "steps": [
+        "Đăng nhập với username 'standard_user' và password 'secret_sauce'",
+        "Mở menu (nút 'Open Menu')",
+        "Bấm 'Logout'"
+      ],
+      "expected_result": "Quay về trang đăng nhập, URL là https://www.saucedemo.com/",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://www.saucedemo.com/"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Username",
+          "arg": "standard_user"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Password",
+          "arg": "secret_sauce"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Open Menu"
+        },
+        {
+          "type": "click",
+          "strategy": "css",
+          "value": "#logout_sidebar_link"
+        },
+        {
+          "type": "expect_url",
+          "arg": "https://www.saucedemo.com/"
+        }
+      ]
+    },
+    {
+      "id": "SD-14",
+      "site": "saucedemo",
+      "url": "https://www.saucedemo.com/",
+      "type": "positive",
+      "steps": [
+        "Đăng nhập với username 'standard_user' và password 'secret_sauce'",
+        "Bấm biểu tượng giỏ hàng"
+      ],
+      "expected_result": "Mở trang giỏ hàng, tiêu đề chứa 'Your Cart'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://www.saucedemo.com/"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Username",
+          "arg": "standard_user"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Password",
+          "arg": "secret_sauce"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "click",
+          "strategy": "css",
+          "value": "[data-test='shopping-cart-link']"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "[data-test='title']",
+          "arg": "Your Cart"
+        }
+      ]
+    },
+    {
+      "id": "UP-01",
+      "site": "uitestingplayground",
+      "url": "http://uitestingplayground.com/sampleapp",
+      "type": "positive",
+      "steps": [
+        "Nhập User Name 'tester' và password 'pwd'",
+        "Bấm nút 'Log In'"
+      ],
+      "expected_result": "Hiện trạng thái chứa 'Welcome, tester!'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "http://uitestingplayground.com/sampleapp"
+        },
+        {
+          "type": "fill",
+          "strategy": "role",
+          "value": "textbox",
+          "role_name": "User Name",
+          "arg": "tester"
+        },
+        {
+          "type": "fill",
+          "strategy": "css",
+          "value": "input[name='Password']",
+          "arg": "pwd"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Log In"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#loginstatus",
+          "arg": "Welcome, tester!"
+        }
+      ]
+    },
+    {
+      "id": "UP-02",
+      "site": "uitestingplayground",
+      "url": "http://uitestingplayground.com/sampleapp",
+      "type": "negative",
+      "steps": [
+        "Nhập User Name 'tester' và password 'wrong'",
+        "Bấm nút 'Log In'"
+      ],
+      "expected_result": "Hiện trạng thái chứa 'Invalid username/password'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "http://uitestingplayground.com/sampleapp"
+        },
+        {
+          "type": "fill",
+          "strategy": "role",
+          "value": "textbox",
+          "role_name": "User Name",
+          "arg": "tester"
+        },
+        {
+          "type": "fill",
+          "strategy": "css",
+          "value": "input[name='Password']",
+          "arg": "wrong"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Log In"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#loginstatus",
+          "arg": "Invalid username/password"
+        }
+      ]
+    },
+    {
+      "id": "UP-03",
+      "site": "uitestingplayground",
+      "url": "http://uitestingplayground.com/sampleapp",
+      "type": "positive",
+      "steps": [
+        "Nhập User Name 'tester' và password 'pwd'",
+        "Bấm nút 'Log In'",
+        "Bấm nút 'Log Out'"
+      ],
+      "expected_result": "Hiện trạng thái chứa 'User logged out.'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "http://uitestingplayground.com/sampleapp"
+        },
+        {
+          "type": "fill",
+          "strategy": "role",
+          "value": "textbox",
+          "role_name": "User Name",
+          "arg": "tester"
+        },
+        {
+          "type": "fill",
+          "strategy": "css",
+          "value": "input[name='Password']",
+          "arg": "pwd"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Log In"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Log Out"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#loginstatus",
+          "arg": "User logged out."
+        }
+      ]
+    },
+    {
+      "id": "UP-04",
+      "site": "uitestingplayground",
+      "url": "http://uitestingplayground.com/textinput",
+      "type": "positive",
+      "steps": [
+        "Nhập 'Hello' vào ô 'Set New Button Name'",
+        "Bấm nút bên dưới ô nhập"
+      ],
+      "expected_result": "Nút đổi tên thành 'Hello'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "http://uitestingplayground.com/textinput"
+        },
+        {
+          "type": "fill",
+          "strategy": "label",
+          "value": "Set New Button Name",
+          "arg": "Hello"
+        },
+        {
+          "type": "click",
+          "strategy": "css",
+          "value": "#updatingButton"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#updatingButton",
+          "arg": "Hello"
+        }
+      ]
+    },
+    {
+      "id": "UP-05",
+      "site": "uitestingplayground",
+      "url": "http://uitestingplayground.com/verifytext",
+      "type": "positive",
+      "steps": [
+        "Mở trang"
+      ],
+      "expected_result": "Ở mục Playground hiện văn bản chứa 'Welcome UserName!'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "http://uitestingplayground.com/verifytext"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": ".bg-primary",
+          "arg": "Welcome UserName!"
+        }
+      ]
+    },
+    {
+      "id": "UP-06",
+      "site": "uitestingplayground",
+      "url": "http://uitestingplayground.com/mouseover",
+      "type": "positive",
+      "steps": [
+        "Bấm liên kết 'Click me' một lần"
+      ],
+      "expected_result": "Bộ đếm hiện 'The link above clicked 1 times.'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "http://uitestingplayground.com/mouseover"
+        },
+        {
+          "type": "click",
+          "strategy": "text",
+          "value": "Click me"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#clickCount",
+          "arg": "1"
+        }
+      ]
+    },
+    {
+      "id": "UP-07",
+      "site": "uitestingplayground",
+      "url": "http://uitestingplayground.com/",
+      "type": "positive",
+      "steps": [
+        "Ở trang chủ bấm liên kết 'Sample App'"
+      ],
+      "expected_result": "Chuyển tới trang Sample App, URL là http://uitestingplayground.com/sampleapp",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "http://uitestingplayground.com/"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "link",
+          "role_name": "Sample App"
+        },
+        {
+          "type": "expect_url",
+          "arg": "http://uitestingplayground.com/sampleapp"
+        }
+      ]
+    },
+    {
+      "id": "UP-08",
+      "site": "uitestingplayground",
+      "url": "http://uitestingplayground.com/",
+      "type": "positive",
+      "steps": [
+        "Ở trang chủ bấm liên kết 'Dynamic ID'"
+      ],
+      "expected_result": "Chuyển tới trang có tiêu đề 'Dynamic ID'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "http://uitestingplayground.com/"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "link",
+          "role_name": "Dynamic ID"
+        },
+        {
+          "type": "expect_visible",
+          "strategy": "role",
+          "value": "heading",
+          "role_name": "Dynamic ID"
+        }
+      ]
+    },
+    {
+      "id": "DQ-01",
+      "site": "demoqa",
+      "url": "https://demoqa.com/text-box",
+      "type": "positive",
+      "steps": [
+        "Nhập Full Name 'Nguyen Van A' và Email 'a@example.com'",
+        "Bấm nút 'Submit'"
+      ],
+      "expected_result": "Khung kết quả hiện 'Name:Nguyen Van A'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://demoqa.com/text-box"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Full Name",
+          "arg": "Nguyen Van A"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "name@example.com",
+          "arg": "a@example.com"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Submit"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#name",
+          "arg": "Nguyen Van A"
+        }
+      ]
+    },
+    {
+      "id": "DQ-02",
+      "site": "demoqa",
+      "url": "https://demoqa.com/radio-button",
+      "type": "positive",
+      "steps": [
+        "Chọn radio 'Yes'"
+      ],
+      "expected_result": "Hiện văn bản 'You have selected Yes'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://demoqa.com/radio-button"
+        },
+        {
+          "type": "click",
+          "strategy": "css",
+          "value": "label[for='yesRadio']"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": ".text-success",
+          "arg": "Yes"
+        }
+      ]
+    },
+    {
+      "id": "DQ-03",
+      "site": "demoqa",
+      "url": "https://demoqa.com/radio-button",
+      "type": "positive",
+      "steps": [
+        "Chọn radio 'Impressive'"
+      ],
+      "expected_result": "Hiện văn bản 'You have selected Impressive'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://demoqa.com/radio-button"
+        },
+        {
+          "type": "click",
+          "strategy": "css",
+          "value": "label[for='impressiveRadio']"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": ".text-success",
+          "arg": "Impressive"
+        }
+      ]
+    },
+    {
+      "id": "DQ-04",
+      "site": "demoqa",
+      "url": "https://demoqa.com/buttons",
+      "type": "positive",
+      "steps": [
+        "Bấm (click đơn) nút 'Click Me'"
+      ],
+      "expected_result": "Hiện văn bản 'You have done a dynamic click'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://demoqa.com/buttons"
+        },
+        {
+          "type": "click",
+          "strategy": "css",
+          "value": "text='Click Me'"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#dynamicClickMessage",
+          "arg": "You have done a dynamic click"
+        }
+      ]
+    },
+    {
+      "id": "PT-04",
+      "site": "practicetestautomation",
+      "url": "https://practicetestautomation.com/practice-test-login/",
+      "type": "positive",
+      "steps": [
+        "Nhập username 'student' và password 'Password123'",
+        "Bấm nút Submit",
+        "Bấm nút 'Log out'"
+      ],
+      "expected_result": "Quay về trang login, URL là https://practicetestautomation.com/practice-test-login/",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://practicetestautomation.com/practice-test-login/"
+        },
+        {
+          "type": "fill",
+          "strategy": "label",
+          "value": "Username",
+          "arg": "student"
+        },
+        {
+          "type": "fill",
+          "strategy": "label",
+          "value": "Password",
+          "arg": "Password123"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Submit"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "link",
+          "role_name": "Log out"
+        },
+        {
+          "type": "expect_url",
+          "arg": "https://practicetestautomation.com/practice-test-login/"
+        }
+      ]
+    },
+    {
+      "id": "PT-05",
+      "site": "practicetestautomation",
+      "url": "https://practicetestautomation.com/practice-test-exceptions/",
+      "type": "positive",
+      "steps": [
+        "Bấm nút 'Add'"
+      ],
+      "expected_result": "Hiện thông báo xác nhận chứa 'Row 2 was added'",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://practicetestautomation.com/practice-test-exceptions/"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Add"
+        },
+        {
+          "type": "expect_text",
+          "strategy": "css",
+          "value": "#confirmation",
+          "arg": "Row 2 was added"
+        }
+      ]
+    },
+    {
+      "id": "OH-03",
+      "site": "orangehrm",
+      "url": "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login",
+      "type": "negative",
+      "steps": [
+        "Nhập username 'Admin', bỏ trống password",
+        "Bấm nút Login"
+      ],
+      "expected_result": "Hiện thông báo kiểm tra hợp lệ 'Required' dưới ô Password",
+      "oracle": [
+        {
+          "type": "goto",
+          "arg": "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login"
+        },
+        {
+          "type": "fill",
+          "strategy": "placeholder",
+          "value": "Username",
+          "arg": "Admin"
+        },
+        {
+          "type": "click",
+          "strategy": "role",
+          "value": "button",
+          "role_name": "Login"
+        },
+        {
+          "type": "expect_visible",
+          "strategy": "text",
+          "value": "Required"
+        }
+      ]
+    }
   ]
 }

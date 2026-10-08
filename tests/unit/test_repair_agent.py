@@ -65,3 +65,13 @@ def test_propose_with_healing_low_needs_approval():
     assert prop.outcome == RepairOutcome.PROPOSED
     assert prop.changed_kinds == ["locator_changed"]
     assert prop.diff and prop.evidence == ["a.png"]
+
+
+def test_proposal_carries_new_plan_and_prompt_has_oracle_and_dom():
+    draft = RepairDraft(new_plan=_fixed_plan(), failure_type=FailureType.LOCATOR_NOT_FOUND)
+    prop = RepairAgent(MockLLMClient(draft), model_name="mock").propose(_old_plan(), _failed_exec(), _tc())
+    assert prop.new_plan == _fixed_plan()  # để áp dụng sau khi người duyệt đồng ý
+    tc = TestCase(id="TC", title="login", type=TestType.POSITIVE, expected_result="Vào inventory")
+    prompt = RepairAgent._build_user_prompt(_old_plan(), _failed_exec(), tc, '- textbox "Username"')
+    assert "Vào inventory" in prompt and '- textbox "Username"' in prompt
+    assert "Bằng chứng DOM" not in RepairAgent._build_user_prompt(_old_plan(), _failed_exec(), tc)

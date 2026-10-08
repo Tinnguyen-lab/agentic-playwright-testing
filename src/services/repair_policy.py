@@ -15,7 +15,7 @@ _MEDIUM = {"test_data_changed", "navigation_changed", "step_added"}
 
 
 def _locator_tuple(action) -> tuple:
-    return (action.strategy, action.value, action.role_name)
+    return (action.strategy, action.value, action.role_name, action.nth)
 
 
 def classify_change(old_plan: PlaywrightPlan, new_plan: PlaywrightPlan) -> tuple[RiskLevel, bool, list[str]]:

@@ -34,7 +34,7 @@ result*.json
 test_design.json
 playwright_results.json
 full_pipeline_results.json
-rq2_results.json
+rq2_results*.json
 artifacts/exec/
 artifacts/exec_rq2/
 
@@ -46,3 +46,16 @@ artifacts/exec_rq2/
 # OS
 .DS_Store
 Thumbs.db
+
+# Report builder output
+tools/report/*.png
+artifacts/*.db
+rq1_results*.json
+rq1_judge_sample*.csv
+rq3_results*.json
+artifacts/exec_rq3/
+artifacts/exec_ui/
+artifacts/rq4/
+rq2_v2_*.json
+rq2_oracle*.json
+artifacts/rq2_v2_scripts/

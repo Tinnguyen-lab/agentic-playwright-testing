@@ -1,4 +1,6 @@
 """Test render script Playwright từ PlaywrightPlan (thuần, offline)."""
+import ast
+
 from src.models.playwright_artifacts import ActionType, LocatorStrategy, PlaywrightAction, PlaywrightPlan
 from src.services.script_template import render_script
 
@@ -34,3 +36,16 @@ def test_render_expect_visible_and_text():
     code = render_script(plan)
     assert 'expect(page.locator(".error")).to_be_visible()' in code
     assert 'expect(page.get_by_test_id("error")).to_contain_text("Epic sadface")' in code
+
+
+def test_llm_strings_are_escaped_not_injected():
+    evil = 'x"); import os; os.system("calc'
+    plan = PlaywrightPlan(actions=[
+        PlaywrightAction(type=ActionType.EXPECT_TEXT, strategy=LocatorStrategy.TEXT, value='"Welcome UserName!"', arg=evil),
+        PlaywrightAction(type=ActionType.CLICK, strategy=LocatorStrategy.ROLE, value="button"),
+    ])
+    code = render_script(plan)
+    tree = ast.parse(code)  # trước đây: SyntaxError / chèn được mã
+    assert [type(n).__name__ for n in ast.walk(tree) if isinstance(n, (ast.Import, ast.ImportFrom))] == ["ImportFrom"]
+    assert 'get_by_text("\\"Welcome UserName!\\"")' in code
+    assert 'page.get_by_role("button").click()' in code  # role_name rỗng -> không có name=, khớp grounding
