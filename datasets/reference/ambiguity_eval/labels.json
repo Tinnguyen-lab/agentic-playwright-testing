@@ -1,0 +1,588 @@
+{
+ "_note": "Ground truth: nhãn mơ hồ được CHÈN CÓ CHỦ ĐÍCH vào từng UC. Thứ tự 'requirements' khớp thứ tự UC trong file. 5 tài liệu đầu do nhóm soạn; 10 tài liệu sau (library..ticket) do Claude soạn nháp, nhóm cần review. Người dùng sở hữu bộ nhãn này (ground truth luận văn). 10 tài liệu trong cases/heldout/ là tập kiểm thử độc lập: soạn SAU khi đã chốt prompt và thuật toán (07/10/2026), không dùng để chỉnh hệ thống; Claude soạn nháp, nhóm review.",
+ "cases": [
+  {
+   "file": "cases/auth.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Đăng nhập",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Đổi mật khẩu",
+     "expected": [
+      "missing_actor"
+     ]
+    },
+    {
+     "hint": "UC-3 Khoá tài khoản",
+     "expected": [
+      "vague_quantifier"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/search.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Tìm kiếm cơ bản",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Tốc độ tìm kiếm",
+     "expected": [
+      "vague_quantifier"
+     ]
+    },
+    {
+     "hint": "UC-3 Xem tất cả kết quả",
+     "expected": []
+    }
+   ],
+   "expected_global": [
+    "conflict"
+   ]
+  },
+  {
+   "file": "cases/cart.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Thêm vào giỏ",
+     "expected": [
+      "missing_expected_outcome"
+     ]
+    },
+    {
+     "hint": "UC-2 Thanh toán",
+     "expected": [
+      "missing_precondition"
+     ]
+    },
+    {
+     "hint": "UC-3 Xử lý đơn",
+     "expected": [
+      "underspecified_action"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/profile.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Xem hồ sơ",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Cập nhật hồ sơ",
+     "expected": [
+      "missing_actor",
+      "missing_expected_outcome"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/booking.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Tìm chuyến",
+     "expected": [
+      "vague_quantifier"
+     ]
+    },
+    {
+     "hint": "UC-2 Đặt chỗ",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Huỷ chỗ",
+     "expected": [
+      "missing_actor"
+     ]
+    },
+    {
+     "hint": "UC-4 Hoàn tiền",
+     "expected": [
+      "missing_expected_outcome"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/library.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Mượn sách",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Gia hạn",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Trả sách trễ",
+     "expected": [
+      "vague_quantifier"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/transfer.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Chuyển tiền nội bộ",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Xác thực OTP",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Hạn mức ngày",
+     "expected": [
+      "missing_expected_outcome"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/course.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Đăng ký học phần",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Huỷ học phần",
+     "expected": [
+      "missing_actor",
+      "missing_expected_outcome"
+     ]
+    },
+    {
+     "hint": "UC-3 Lớp đã đầy",
+     "expected": []
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/inventory.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Nhập kho",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Cảnh báo tồn kho",
+     "expected": [
+      "vague_quantifier"
+     ]
+    },
+    {
+     "hint": "UC-3 Xuất kho",
+     "expected": [
+      "missing_expected_outcome"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/restaurant.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Đặt bàn",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Đổi giờ",
+     "expected": [
+      "missing_expected_outcome"
+     ]
+    },
+    {
+     "hint": "UC-3 Huỷ do đến trễ",
+     "expected": [
+      "vague_quantifier"
+     ]
+    },
+    {
+     "hint": "UC-4 Giới hạn số khách",
+     "expected": []
+    }
+   ],
+   "expected_global": [
+    "conflict"
+   ]
+  },
+  {
+   "file": "cases/wallet.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Nạp tiền",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Rút tiền",
+     "expected": [
+      "missing_actor",
+      "missing_expected_outcome"
+     ]
+    },
+    {
+     "hint": "UC-3 Lịch sử giao dịch",
+     "expected": []
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/leave.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Gửi đơn nghỉ phép",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Duyệt đơn",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Số ngày phép còn lại",
+     "expected": [
+      "missing_expected_outcome"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/social.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Đăng bài",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Đính kèm ảnh",
+     "expected": [
+      "vague_quantifier"
+     ]
+    },
+    {
+     "hint": "UC-3 Báo cáo vi phạm",
+     "expected": [
+      "missing_actor",
+      "missing_expected_outcome"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/coupon.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Áp mã giảm giá",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Điều kiện giá trị đơn",
+     "expected": [
+      "missing_expected_outcome"
+     ]
+    },
+    {
+     "hint": "UC-3 Ưu đãi thành viên",
+     "expected": [
+      "underspecified_action"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/ticket.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Tạo yêu cầu hỗ trợ",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Phản hồi",
+     "expected": [
+      "vague_quantifier"
+     ]
+    },
+    {
+     "hint": "UC-3 Đóng ticket",
+     "expected": []
+    },
+    {
+     "hint": "UC-4 Độ dài tiêu đề",
+     "expected": []
+    }
+   ],
+   "expected_global": [
+    "conflict"
+   ]
+  },
+  {
+   "file": "cases/heldout/parking.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Gửi xe",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Lấy xe",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Mất vé",
+     "expected": [
+      "underspecified_action",
+      "missing_expected_outcome"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/heldout/clinic.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Đặt lịch",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Huỷ lịch",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Nhắc lịch",
+     "expected": [
+      "vague_quantifier"
+     ]
+    },
+    {
+     "hint": "UC-4 Kết quả khám",
+     "expected": [
+      "missing_actor"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/heldout/recruitment.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Nộp hồ sơ",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Sàng lọc",
+     "expected": [
+      "vague_quantifier"
+     ]
+    },
+    {
+     "hint": "UC-3 Mời phỏng vấn",
+     "expected": []
+    },
+    {
+     "hint": "UC-4 Rút hồ sơ",
+     "expected": [
+      "missing_expected_outcome"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/heldout/bill.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Tra cứu hoá đơn",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Thanh toán",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Huỷ thanh toán",
+     "expected": [
+      "missing_precondition"
+     ]
+    },
+    {
+     "hint": "UC-4 Thanh toán tự động",
+     "expected": []
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/heldout/gym.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Đăng ký gói tập",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Đặt lớp",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Bảo lưu",
+     "expected": [
+      "vague_quantifier"
+     ]
+    },
+    {
+     "hint": "UC-4 Check-in",
+     "expected": [
+      "missing_actor",
+      "missing_expected_outcome"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/heldout/car_rental.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Tìm xe",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Đặt xe",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Thời gian thuê",
+     "expected": []
+    },
+    {
+     "hint": "UC-4 Đặt cọc",
+     "expected": []
+    }
+   ],
+   "expected_global": [
+    "conflict"
+   ]
+  },
+  {
+   "file": "cases/heldout/exam.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Đăng ký thi",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Phúc khảo",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Hoãn thi",
+     "expected": [
+      "underspecified_action",
+      "missing_expected_outcome"
+     ]
+    },
+    {
+     "hint": "UC-4 Xem lịch thi",
+     "expected": []
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/heldout/shipping.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Tạo đơn giao",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Theo dõi đơn",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Giao thất bại",
+     "expected": [
+      "missing_actor"
+     ]
+    },
+    {
+     "hint": "UC-4 Hoàn hàng",
+     "expected": []
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/heldout/attendance.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Chấm công vào",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Đi muộn",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Giải trình",
+     "expected": [
+      "vague_quantifier"
+     ]
+    },
+    {
+     "hint": "UC-4 Báo cáo",
+     "expected": [
+      "missing_actor"
+     ]
+    }
+   ],
+   "expected_global": []
+  },
+  {
+   "file": "cases/heldout/loyalty.md",
+   "requirements": [
+    {
+     "hint": "UC-1 Tích điểm",
+     "expected": []
+    },
+    {
+     "hint": "UC-2 Đổi điểm",
+     "expected": []
+    },
+    {
+     "hint": "UC-3 Hết hạn điểm",
+     "expected": []
+    },
+    {
+     "hint": "UC-4 Hạng thành viên",
+     "expected": []
+    }
+   ],
+   "expected_global": [
+    "conflict"
+   ]
+  }
+ ]
+}

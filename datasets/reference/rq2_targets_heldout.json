@@ -1,0 +1,468 @@
+{
+ "_note": "Tập kiểm thử độc lập cho RQ2: 12 target trên 4 site CHƯA dùng (expandtesting, rahulshettyacademy, automationexercise, testpages.eviltester), soạn ngày 08/10/2026 sau khi đã chốt prompt và thuật toán; không dùng để chỉnh hệ thống. Định dạng như rq2_targets.json; oracle đã kiểm 12/12 hai lần.",
+ "targets": [
+  {
+   "id": "ET-01",
+   "site": "expandtesting",
+   "url": "https://practice.expandtesting.com/login",
+   "type": "positive",
+   "steps": [
+    "Nhập username 'practice' và password 'SuperSecretPassword!'",
+    "Bấm Login"
+   ],
+   "expected_result": "Đăng nhập thành công: URL là https://practice.expandtesting.com/secure và hiện thông báo 'You logged into a secure area!'",
+   "oracle": [
+    {
+     "type": "goto",
+     "arg": "https://practice.expandtesting.com/login"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "#username",
+     "arg": "practice"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "#password",
+     "arg": "SuperSecretPassword!"
+    },
+    {
+     "type": "click",
+     "strategy": "css",
+     "value": "#submit-login"
+    },
+    {
+     "type": "expect_url",
+     "arg": "https://practice.expandtesting.com/secure"
+    },
+    {
+     "type": "expect_text",
+     "strategy": "css",
+     "value": "#flash",
+     "arg": "You logged into a secure area!"
+    }
+   ]
+  },
+  {
+   "id": "ET-02",
+   "site": "expandtesting",
+   "url": "https://practice.expandtesting.com/login",
+   "type": "negative",
+   "steps": [
+    "Nhập username 'practice' và password 'wrongPassword'",
+    "Bấm Login"
+   ],
+   "expected_result": "Hiện thông báo lỗi 'Your password is invalid!'",
+   "oracle": [
+    {
+     "type": "goto",
+     "arg": "https://practice.expandtesting.com/login"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "#username",
+     "arg": "practice"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "#password",
+     "arg": "wrongPassword"
+    },
+    {
+     "type": "click",
+     "strategy": "css",
+     "value": "#submit-login"
+    },
+    {
+     "type": "expect_text",
+     "strategy": "css",
+     "value": "#flash",
+     "arg": "Your password is invalid!"
+    }
+   ]
+  },
+  {
+   "id": "ET-03",
+   "site": "expandtesting",
+   "url": "https://practice.expandtesting.com/inputs",
+   "type": "positive",
+   "steps": [
+    "Nhập 'hello rq2' vào ô Input: Text",
+    "Bấm Display Inputs"
+   ],
+   "expected_result": "Phần kết quả hiển thị text 'hello rq2'",
+   "oracle": [
+    {
+     "type": "goto",
+     "arg": "https://practice.expandtesting.com/inputs"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "#input-text",
+     "arg": "hello rq2"
+    },
+    {
+     "type": "click",
+     "strategy": "css",
+     "value": "#btn-display-inputs"
+    },
+    {
+     "type": "expect_text",
+     "strategy": "css",
+     "value": "#output-text",
+     "arg": "hello rq2"
+    }
+   ]
+  },
+  {
+   "id": "RS-01",
+   "site": "rahulshettyacademy",
+   "url": "https://rahulshettyacademy.com/loginpagePractise/",
+   "type": "negative",
+   "steps": [
+    "Nhập username 'wronguser' và password 'wrongpass'",
+    "Bấm Sign In"
+   ],
+   "expected_result": "Hiện thông báo lỗi 'Incorrect username/password.'",
+   "oracle": [
+    {
+     "type": "goto",
+     "arg": "https://rahulshettyacademy.com/loginpagePractise/"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "#username",
+     "arg": "wronguser"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "#password",
+     "arg": "wrongpass"
+    },
+    {
+     "type": "click",
+     "strategy": "css",
+     "value": "#signInBtn"
+    },
+    {
+     "type": "expect_text",
+     "strategy": "css",
+     "value": ".alert-danger",
+     "arg": "Incorrect username/password."
+    }
+   ]
+  },
+  {
+   "id": "RS-02",
+   "site": "rahulshettyacademy",
+   "url": "https://rahulshettyacademy.com/angularpractice/",
+   "type": "negative",
+   "steps": [
+    "Nhập Name là 'A' (1 ký tự)",
+    "Nhập Email 'a@example.com' (để rời ô Name)"
+   ],
+   "expected_result": "Hiện cảnh báo 'Name should be at least 2 characters'",
+   "oracle": [
+    {
+     "type": "goto",
+     "arg": "https://rahulshettyacademy.com/angularpractice/"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "form input[name='name']",
+     "arg": "A"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "input[name='email']",
+     "arg": "a@example.com"
+    },
+    {
+     "type": "expect_text",
+     "strategy": "css",
+     "value": ".alert-danger",
+     "arg": "Name should be at least 2 characters"
+    }
+   ]
+  },
+  {
+   "id": "RS-03",
+   "site": "rahulshettyacademy",
+   "url": "https://rahulshettyacademy.com/angularpractice/",
+   "type": "positive",
+   "steps": [
+    "Nhập Name 'Rq Two', Email 'rq2@example.com', Password 'pw123456'",
+    "Bấm Submit"
+   ],
+   "expected_result": "Hiện thông báo thành công 'The Form has been submitted successfully!'",
+   "oracle": [
+    {
+     "type": "goto",
+     "arg": "https://rahulshettyacademy.com/angularpractice/"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "form input[name='name']",
+     "arg": "Rq Two"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "input[name='email']",
+     "arg": "rq2@example.com"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "#exampleInputPassword1",
+     "arg": "pw123456"
+    },
+    {
+     "type": "click",
+     "strategy": "css",
+     "value": "input[type='submit']"
+    },
+    {
+     "type": "expect_text",
+     "strategy": "css",
+     "value": ".alert-success",
+     "arg": "The Form has been submitted successfully!"
+    }
+   ]
+  },
+  {
+   "id": "AE-01",
+   "site": "automationexercise",
+   "url": "https://automationexercise.com/login",
+   "type": "negative",
+   "steps": [
+    "Ở form 'Login to your account', nhập email 'nobody-rq2@example.com' và password 'wrong'",
+    "Bấm Login"
+   ],
+   "expected_result": "Hiện lỗi 'Your email or password is incorrect!'",
+   "oracle": [
+    {
+     "type": "goto",
+     "arg": "https://automationexercise.com/login"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "[data-qa='login-email']",
+     "arg": "nobody-rq2@example.com"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "[data-qa='login-password']",
+     "arg": "wrong"
+    },
+    {
+     "type": "click",
+     "strategy": "css",
+     "value": "[data-qa='login-button']"
+    },
+    {
+     "type": "expect_text",
+     "strategy": "css",
+     "value": "form[action='/login'] p",
+     "arg": "Your email or password is incorrect!"
+    }
+   ]
+  },
+  {
+   "id": "AE-02",
+   "site": "automationexercise",
+   "url": "https://automationexercise.com/products",
+   "type": "positive",
+   "steps": [
+    "Nhập 'Blue Top' vào ô Search Product",
+    "Bấm nút tìm kiếm"
+   ],
+   "expected_result": "Hiện tiêu đề 'Searched Products' và kết quả có sản phẩm 'Blue Top'",
+   "oracle": [
+    {
+     "type": "goto",
+     "arg": "https://automationexercise.com/products"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "#search_product",
+     "arg": "Blue Top"
+    },
+    {
+     "type": "click",
+     "strategy": "css",
+     "value": "#submit_search"
+    },
+    {
+     "type": "expect_visible",
+     "strategy": "css",
+     "value": "h2.title"
+    },
+    {
+     "type": "expect_text",
+     "strategy": "css",
+     "value": "h2.title",
+     "arg": "Searched Products"
+    },
+    {
+     "type": "expect_text",
+     "strategy": "css",
+     "value": ".productinfo p",
+     "arg": "Blue Top"
+    }
+   ]
+  },
+  {
+   "id": "AE-03",
+   "site": "automationexercise",
+   "url": "https://automationexercise.com/login",
+   "type": "positive",
+   "steps": [
+    "Ở form 'New User Signup!', nhập Name 'Rq Two' và email 'rq2-heldout-0810@example.com'",
+    "Bấm Signup"
+   ],
+   "expected_result": "Chuyển sang URL https://automationexercise.com/signup và hiện 'Enter Account Information'",
+   "oracle": [
+    {
+     "type": "goto",
+     "arg": "https://automationexercise.com/login"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "[data-qa='signup-name']",
+     "arg": "Rq Two"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "[data-qa='signup-email']",
+     "arg": "rq2-heldout-0810@example.com"
+    },
+    {
+     "type": "click",
+     "strategy": "css",
+     "value": "[data-qa='signup-button']"
+    },
+    {
+     "type": "expect_url",
+     "arg": "https://automationexercise.com/signup"
+    },
+    {
+     "type": "expect_visible",
+     "strategy": "text",
+     "value": "Enter Account Information"
+    }
+   ]
+  },
+  {
+   "id": "EV-01",
+   "site": "testpages-eviltester",
+   "url": "https://testpages.eviltester.com/styled/basic-html-form-test.html",
+   "type": "positive",
+   "steps": [
+    "Nhập Username 'alice'",
+    "Bấm nút submit"
+   ],
+   "expected_result": "Trang kết quả hiển thị username là 'alice'",
+   "oracle": [
+    {
+     "type": "goto",
+     "arg": "https://testpages.eviltester.com/styled/basic-html-form-test.html"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "input[name='username']",
+     "arg": "alice"
+    },
+    {
+     "type": "click",
+     "strategy": "css",
+     "value": "input[type='submit'][value='submit']"
+    },
+    {
+     "type": "expect_text",
+     "strategy": "css",
+     "value": "#_valueusername",
+     "arg": "alice"
+    }
+   ]
+  },
+  {
+   "id": "EV-02",
+   "site": "testpages-eviltester",
+   "url": "https://testpages.eviltester.com/styled/basic-html-form-test.html",
+   "type": "positive",
+   "steps": [
+    "Xoá nội dung ô Comments và nhập 'hello from rq2'",
+    "Bấm nút submit"
+   ],
+   "expected_result": "Trang kết quả hiển thị comments là 'hello from rq2'",
+   "oracle": [
+    {
+     "type": "goto",
+     "arg": "https://testpages.eviltester.com/styled/basic-html-form-test.html"
+    },
+    {
+     "type": "fill",
+     "strategy": "css",
+     "value": "textarea[name='comments']",
+     "arg": "hello from rq2"
+    },
+    {
+     "type": "click",
+     "strategy": "css",
+     "value": "input[type='submit'][value='submit']"
+    },
+    {
+     "type": "expect_text",
+     "strategy": "css",
+     "value": "#_valuecomments",
+     "arg": "hello from rq2"
+    }
+   ]
+  },
+  {
+   "id": "EV-03",
+   "site": "testpages-eviltester",
+   "url": "https://testpages.eviltester.com/styled/basic-html-form-test.html",
+   "type": "positive",
+   "steps": [
+    "Giữ nguyên các lựa chọn mặc định",
+    "Bấm nút submit"
+   ],
+   "expected_result": "Trang kết quả hiển thị giá trị radio mặc định 'rd2'",
+   "oracle": [
+    {
+     "type": "goto",
+     "arg": "https://testpages.eviltester.com/styled/basic-html-form-test.html"
+    },
+    {
+     "type": "click",
+     "strategy": "css",
+     "value": "input[type='submit'][value='submit']"
+    },
+    {
+     "type": "expect_text",
+     "strategy": "css",
+     "value": "#_valueradioval",
+     "arg": "rd2"
+    }
+   ]
+  }
+ ]
+}
