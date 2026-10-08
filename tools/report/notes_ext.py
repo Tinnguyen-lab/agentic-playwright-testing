@@ -113,8 +113,8 @@ THREATS = [
     "liệu RQ1, 12 target RQ2 trên 4 site mới, 8 mutation RQ3). Vòng lặp grounding và việc không che lỗi giữ được trên "
     "tập độc lập; tỉ lệ sửa lỗi giao diện của RQ3 thì không (mục 5.3.1). Các tập độc lập nhỏ, và cũng do Claude soạn.",
     "RQ2 dùng site demo, luồng ngắn; ShopLab của RQ3 nhỏ và do nhóm dựng. Kết quả không suy rộng cho ứng dụng doanh nghiệp.",
-    "RQ1 chỉ chạy với deepseek-chat. RQ2 và RQ3 có thêm Claude Sonnet 5 (và Gemma 4 12B cho RQ2) nhưng chỉ một lần "
-    "chạy mỗi model; Claude không cho đặt temperature = 0 nên so sánh giữa model không hoàn toàn cùng điều kiện.",
+    "RQ1 chỉ chạy với deepseek-chat. RQ2 và RQ3 có thêm Claude Sonnet 5 (và Gemma 4 12B trên 12 target độc lập của RQ2) "
+    "nhưng chỉ một lần chạy mỗi model; Claude không cho đặt temperature = 0 nên so sánh giữa model không hoàn toàn cùng điều kiện.",
     "Người duyệt trong RQ3 là mô phỏng (duyệt mọi đề xuất Low, chuyển phần còn lại lên người).",
     "Hạ tầng mạng ảnh hưởng tới RQ2 (HTTP/2 tới Heroku); đã kiểm soát bằng --disable-http2 và chạy lại khi treo tải trang.",
 ]
@@ -211,6 +211,11 @@ RQ2_MODELS_HELDOUT = [
     "được chạy. Template đã được sửa để escape mọi chuỗi (json.dumps) và có unit test cho trường hợp chèn mã. Rà lại mọi "
     "script đã lưu cho thấy chỉ một script bị ảnh hưởng; chạy lại với template đã sửa script đó vẫn trượt, nên không số "
     "liệu nào thay đổi.",
+    "Gemma 4 12B chạy local đạt 0/12, 4/12 và 6/12 trên tập độc lập. Kết quả của nhánh aria_loop bị hạ tầng làm méo: 4 "
+    "target trượt vì lời gọi LLM vượt 10 phút và bị huỷ (Request timed out), không phải vì script sai; trong 8 target "
+    "có plan, 6 đạt. Thứ tự none < aria < aria_loop vẫn giữ như hai model cloud, nhưng với một lần chạy và 4 lần huỷ, kết "
+    "quả này chỉ có tính minh hoạ. Các script của lượt Gemma bị xoá do lỗi điều phối lệnh trước khi kịp lưu, nên không "
+    "kiểm được assertion rỗng cho Gemma.",
     "Claude không cho đặt temperature = 0 (DeepSeek chạy ở 0), nên so sánh giữa hai model không hoàn toàn cùng điều "
     "kiện; mỗi model trên mỗi tập chỉ có một lần chạy, trừ DeepSeek.",
 ]

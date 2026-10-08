@@ -57,7 +57,7 @@ def rq1_testgen(r, v1: dict, v2: dict, notes):
                          pct(g["unsupported"], g["n_tc"]), pct(g["traceable"], g["n_tc"])])
     r.table("Chất lượng test case theo nhánh và phiên bản quy tắc",
             ["Nhánh", "Số TC", "Độ phủ gold", "Positive", "Negative", "Biên", "Không căn cứ", "Truy vết"],
-            rows, [3.3, 1.3, 2.6, 1.9, 1.9, 1.5, 2.0, 1.6], center_cols=(1, 2, 3, 4, 5, 6, 7))
+            rows, [3.6, 1.2, 2.6, 1.8, 2.1, 1.4, 1.9, 1.6], center_cols=(1, 2, 3, 4, 5, 6, 7))
     gold = json.loads((ROOT / "datasets/reference/ambiguity_eval/test_conditions.json").read_text(encoding="utf-8"))["cases"]
     allc = {(doc, g["id"]) for doc, gs in gold.items() for g in gs}
     lines = []
@@ -210,7 +210,7 @@ def rq1_heldout(r, amb_dev: dict | None, amb_ho: dict | None, tg_dev: dict | Non
     rows += _tg_rows(tg_ho, "độc lập")
     r.table("Chất lượng test case (quy tắc phiên bản 2): tập phát triển so với tập độc lập",
             ["Nhánh", "Số TC", "Độ phủ gold", "Positive", "Negative", "Biên", "Không căn cứ", "Truy vết"],
-            rows, [3.3, 1.3, 2.6, 1.9, 1.9, 1.5, 2.0, 1.6], center_cols=(1, 2, 3, 4, 5, 6, 7))
+            rows, [3.6, 1.2, 2.6, 1.8, 2.1, 1.4, 1.9, 1.6], center_cols=(1, 2, 3, 4, 5, 6, 7))
     parts = []
     for tag, d in (("phát triển", tg_dev), ("độc lập", tg_ho)):
         if d:
@@ -239,7 +239,9 @@ def rq2_models_heldout(r, sets: list[tuple[str, str, list[dict]]], vac_ho: dict,
         "hay không, cùng harness được chạy thêm với Claude Sonnet 5 (cloud) và Gemma 4 12B (local, LM Studio), và trên một "
         "tập độc lập 12 target thuộc 4 site chưa dùng (practice.expandtesting.com, rahulshettyacademy.com, "
         "automationexercise.com, testpages.eviltester.com), soạn sau khi đã chốt hệ thống. Oracle viết tay đạt 12/12 hai "
-        "lần trước khi chạy LLM. DeepSeek chạy ba lần trên mỗi tập, các model khác một lần.")
+        "lần trước khi chạy LLM. DeepSeek chạy ba lần trên mỗi tập, Claude một lần. Gemma chạy trên máy của nhóm mất 6–16 "
+        "phút cho mỗi lời gọi có kèm cây trợ năng (model suy luận trước khi trả lời), nên chỉ được đo một lần trên tập độc "
+        "lập; chạy 50 target sẽ mất hơn 20 giờ.")
     rows = [[tap, model, str(len(runs)), _rq2_cell(runs, "none"), _rq2_cell(runs, "aria"), _rq2_cell(runs, "aria_loop")]
             for tap, model, runs in sets]
     r.table("First-run pass rate theo model và tập target", ["Tập", "Model", "Lần", "none", "aria", "aria_loop"], rows,
@@ -288,6 +290,6 @@ def rq3_models_heldout(r, sets: list[tuple[str, dict | None]], notes):
                          str(v["escalated"]), str(v["weakened"])])
     r.table("Kết quả RQ3 theo model và tập mutation",
             ["Tập", "Model", "Nhánh", "Kỹ thuật sửa được", "Nghiệp vụ bị che", "Escalate", "Làm yếu"], rows,
-            [2.4, 3, 2.8, 2.4, 2.4, 1.6, 1.6], center_cols=(3, 4, 5, 6))
+            [2.0, 3.6, 2.7, 2.2, 2.2, 2.0, 1.5], center_cols=(3, 4, 5, 6))
     for para in notes.RQ3_MODELS_HELDOUT:
         r.p(para)
