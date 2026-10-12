@@ -32,6 +32,9 @@ class TestCase(BaseModel):
     steps: list[TestStep] = Field(default_factory=list)
     expected_result: str = ""
     source_excerpt: str = ""
+    scenario_id: str = ""
+    review_required: bool = False
+    review_note: str = ""
 
 
 class TestCaseDraft(BaseModel):

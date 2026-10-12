@@ -8,11 +8,15 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from src.models.requirement import StructuredRequirement
-from src.models.test_case import TestCaseDraft, TestDesignResult, TraceLink
+from src.models.test_case import TestCase, TestCaseDraft, TestDesignResult, TestStep, TestType, TraceLink
 from src.services.boundary_analysis import derive_boundary_cases
 from src.services.llm_client import LLMClient
+from src.services.scenario_decomposition import decompose
+from src.services.test_design_policy import TEST_DESIGN_RUNTIME_POLICY
 
-SYSTEM_PROMPT = """\
+MIN_EXPANDED_CASES = 6
+
+SYSTEM_PROMPT = f"""\
 Bạn là kỹ sư thiết kế kiểm thử. Nhận MỘT yêu cầu ĐÃ ĐƯỢC PHÊ DUYỆT và sinh các test case
 kiểm thử chức năng.
 
@@ -28,7 +32,13 @@ QUY TẮC BẮT BUỘC:
 - Bám actor/precondition/action/expected_outcome của requirement.
 - Hệ thống TỰ bổ sung case biên (boundary) từ ràng buộc SỐ; hãy tập trung positive và
   negative theo ngữ nghĩa, không cần liệt kê từng giá trị biên số.
+- Ở chế độ Expanded, bạn có thể đề xuất biến thể hữu ích chưa có oracle CHỈ khi để
+  expected_result rỗng, review_required=true và review_note nói chính xác điều cần người duyệt xác nhận.
+  Đó là ứng viên để thảo luận, không phải bằng chứng yêu cầu hay case đã được xác minh.
 - KHÔNG gán ID (hệ thống tự gán).
+
+CHÍNH SÁCH RUNTIME TỪ SKILL:
+{TEST_DESIGN_RUNTIME_POLICY}
 
 Trả về JSON gồm: test_cases[].\
 """
@@ -39,14 +49,41 @@ class TestDesignAgent:
         self._llm = llm
         self._model_name = model_name
 
-    def design(self, requirement: StructuredRequirement) -> TestDesignResult:
+    def design(self, requirement: StructuredRequirement, expanded: bool = True) -> TestDesignResult:
+        # Compatibility argument only: exploratory coverage is a product-wide
+        # policy and cannot be disabled by a caller.
+        expanded = True
         if not requirement.action or not requirement.action.strip():
             return self._empty_result(requirement.id)
 
-        user_prompt = self._build_user_prompt(requirement)
+        scenarios = decompose(requirement)
+        user_prompt = self._build_user_prompt(requirement, scenarios, expanded=expanded)
         draft = self._llm.structured_completion(SYSTEM_PROMPT, user_prompt, TestCaseDraft)
+        # Expanded is the reviewer-facing ideation mode.  Models often return
+        # only the obvious happy path even when asked for variants, so give one
+        # bounded retry.  The returned candidates remain review-gated whenever
+        # their oracle is not stated in the approved requirement.
+        if expanded and len(draft.test_cases) < MIN_EXPANDED_CASES:
+            draft = self._llm.structured_completion(
+                SYSTEM_PROMPT,
+                self._expanded_retry_prompt(requirement, scenarios, len(draft.test_cases)),
+                TestCaseDraft,
+            )
 
-        all_cases = list(draft.test_cases) + derive_boundary_cases(requirement)
+        # Numeric BVA is deterministic below.  Discard LLM boundary cases so an
+        # approximate value (for example 2 instead of the documented 1/2000)
+        # cannot be presented as evidence-backed coverage.
+        llm_cases = [tc for tc in draft.test_cases if tc.type != TestType.BOUNDARY]
+        llm_cases = [tc.model_copy(update={"scenario_id": tc.scenario_id or scenarios[0].id}) for tc in llm_cases]
+        if expanded:
+            llm_cases = self._gate_exploratory_drafts(llm_cases)
+            llm_cases = self._select_distinct_exploratory_drafts(llm_cases)
+        evidence_backed = self._deduplicate(
+            llm_cases + derive_boundary_cases(requirement) +
+            self._missing_positive_cases(requirement, scenarios, llm_cases)
+        )
+        exploratory = self._exploratory_candidates(requirement, evidence_backed) if expanded else []
+        all_cases = self._deduplicate(evidence_backed + exploratory)
 
         cases = []
         links = []
@@ -71,14 +108,205 @@ class TestDesignAgent:
         )
 
     @staticmethod
-    def _build_user_prompt(requirement: StructuredRequirement) -> str:
-        return (
-            "Thiết kế test case cho yêu cầu đã duyệt dưới đây, trả JSON theo hướng dẫn.\n\n"
+    def _missing_positive_cases(requirement: StructuredRequirement, scenarios, cases: list[TestCase]) -> list[TestCase]:
+        """Fail safe: retain one reviewable happy-path case for the main scenario only."""
+        if any(tc.type == TestType.POSITIVE for tc in cases):
+            return []
+        scenario = scenarios[0]
+        missing_oracle = not bool(scenario.expected_result)
+        return [TestCase(
+            title=f"{requirement.title} — {scenario.title}", type=TestType.POSITIVE,
+            scenario_id=scenario.id,
+            preconditions=[requirement.precondition] if requirement.precondition else [],
+            steps=[TestStep(action=step) for step in scenario.flow],
+            expected_result=scenario.expected_result,
+            source_excerpt=requirement.source_excerpt,
+            review_required=missing_oracle,
+            review_note="Expected result for this scenario is not specified in the requirement." if missing_oracle else "",
+        )]
+
+    @staticmethod
+    def _deduplicate(cases):
+        """Remove semantically identical drafts before assigning stable IDs."""
+        kept, seen = [], set()
+        for tc in cases:
+            key = (tc.scenario_id, tc.type.value, tc.title.casefold().strip(),
+                   tuple(step.action.casefold().strip() for step in tc.steps),
+                   tc.expected_result.casefold().strip())
+            if key not in seen:
+                seen.add(key)
+                kept.append(tc)
+        return kept
+
+    @staticmethod
+    def _gate_exploratory_drafts(cases: list[TestCase]) -> list[TestCase]:
+        """Keep LLM-suggested risk cases from masquerading as documented behavior.
+
+        A positive case can directly represent the approved outcome.  In Expanded
+        mode, non-positive LLM cases are ideas unless a reviewer explicitly
+        validates their oracle; clearing the oracle prevents an invented PASS.
+        Deterministic boundary cases are added later from explicit constraints.
+        """
+        gated = []
+        for case in cases:
+            if case.type == TestType.POSITIVE:
+                gated.append(case)
+                continue
+            note = case.review_note.strip()
+            policy_note = (
+                "Exploratory risk case: its expected behavior is not accepted as requirement evidence. "
+                "Reviewer must validate the setup and oracle before approval."
+            )
+            gated.append(case.model_copy(update={
+                "expected_result": "",
+                "review_required": True,
+                "review_note": f"{note} {policy_note}".strip(),
+            }))
+        return gated
+
+    @staticmethod
+    def _select_distinct_exploratory_drafts(cases: list[TestCase]) -> list[TestCase]:
+        """Keep one representative per inferred risk type before adding other techniques.
+
+        Models often turn one login form into many near-identical password
+        mutations.  They are useful ideas, but a reviewer gets better coverage
+        from a compact risk portfolio than from six copies of the same hypothesis.
+        """
+        selected: list[TestCase] = []
+        seen_inferred_types: set[TestType] = set()
+        for case in cases:
+            if case.type == TestType.POSITIVE:
+                selected.append(case)
+                continue
+            if case.type in seen_inferred_types:
+                continue
+            seen_inferred_types.add(case.type)
+            selected.append(case)
+        return selected
+
+    @staticmethod
+    def _exploratory_candidates(requirement: StructuredRequirement, existing_cases: list[TestCase]) -> list[TestCase]:
+        """Add non-evidentiary QA heuristics to the Expanded review queue only."""
+        needed = max(0, MIN_EXPANDED_CASES - len(existing_cases))
+        text = " ".join(filter(None, [
+            requirement.title, requirement.action, requirement.expected_outcome,
+            *requirement.main_flow, *requirement.alternative_flows,
+            *requirement.business_rules, *requirement.constraints,
+        ])).casefold()
+        input_related = any(token in text for token in (
+            "nhập", "điền", "đăng nhập", "mật khẩu", "email", "tìm", "search", "form", "field",
+        ))
+        collection_related = any(token in text for token in (
+            "tìm", "search", "lọc", "filter", "sản phẩm", "danh sách", "kết quả", "hiển thị",
+        ))
+
+        def idea(title: str, test_type: TestType, action: str, focus: str) -> TestCase:
+            return TestCase(
+                title=f"Khám phá — {requirement.title}: {title}", type=test_type,
+                scenario_id="EXPLORE", preconditions=[requirement.precondition] if requirement.precondition else [],
+                steps=[TestStep(action=action)], source_excerpt=requirement.source_excerpt,
+                review_required=True,
+                review_note=(f"Exploratory heuristic ({focus}), not a requirement-backed oracle. "
+                             "Reviewer must define target-specific setup, expected result and acceptance criteria before approval."),
+            )
+
+        existing_text = " ".join(f"{case.title} {case.review_note}" for case in existing_cases).casefold()
+        has_keyboard_ux = any(token in existing_text for token in ("bàn phím", "keyboard", "focus", "viewport", "responsive"))
+        has_recovery = any(token in existing_text for token in ("tải lại", "reload", "loading", "chậm", "quay lại", "back"))
+        diversity: list[TestCase] = []
+        if not has_keyboard_ux:
+            diversity.append(idea("Dùng bàn phím và focus", TestType.ERROR_GUESSING,
+                                  "Hoàn tất tác vụ chỉ bằng bàn phím; kiểm tra thứ tự focus và cách nhận biết lỗi/trạng thái.",
+                                  "keyboard accessibility and UX"))
+        if not has_recovery:
+            diversity.append(idea("Khả năng phục hồi khi tải chậm", TestType.ALTERNATIVE_FLOW,
+                                  "Quan sát hành vi khi phản hồi chậm, tải lại hoặc chuyển trang trong lúc tác vụ đang xử lý.",
+                                  "loading, recovery and user feedback"))
+
+        candidates: list[TestCase] = []
+        if input_related:
+            candidates.extend([
+                idea("Dữ liệu trống và khoảng trắng", TestType.ERROR_GUESSING,
+                     "Thử gửi tác vụ với trường đầu vào liên quan để trống hoặc chỉ có khoảng trắng.",
+                     "validation and error-message clarity"),
+                idea("Biên dữ liệu và ký tự đặc biệt", TestType.BOUNDARY,
+                     "Thử giá trị rất ngắn, rất dài, Unicode và ký tự đặc biệt ở các trường đầu vào liên quan.",
+                     "boundary-value and robustness"),
+                idea("Thao tác lặp nhanh", TestType.ERROR_GUESSING,
+                     "Thử submit/click hành động chính hai lần nhanh liên tiếp.",
+                     "duplicate submission and idempotency"),
+            ])
+        if collection_related:
+            candidates.extend([
+                idea("Trạng thái rỗng hoặc không có kết quả", TestType.ALTERNATIVE_FLOW,
+                     "Thử truy vấn hoặc điều kiện không tạo ra dữ liệu hiển thị.", "empty-state UX"),
+                idea("Tính ổn định khi đổi trạng thái", TestType.ALTERNATIVE_FLOW,
+                     "Thử quay lại, tải lại trang hoặc đổi filter sau khi hoàn tất tác vụ.",
+                     "state persistence and recovery"),
+            ])
+        candidates.extend([
+            idea("Hiển thị trên kích thước hẹp", TestType.ERROR_GUESSING,
+                 "Kiểm tra thao tác và thông báo trên viewport hẹp/màn hình nhỏ.",
+                 "responsive UI and readability"),
+        ])
+        # Preserve at least one UX/accessibility and one resilience idea even
+        # when the LLM already filled the numeric quota with input variations.
+        return diversity + candidates[:max(needed, 0)]
+
+    @staticmethod
+    def _build_user_prompt(requirement: StructuredRequirement, scenarios=None, expanded: bool = True) -> str:
+        # Keep the private helper consistent with the public, always-expanded policy.
+        expanded = True
+        scenarios = scenarios or decompose(requirement)
+        prompt = (
+            "VAI TRÒ: Bạn là kỹ sư QA thiết kế test có khả năng truy vết.\n"
+            "NHIỆM VỤ: Thiết kế test case cho đúng MỘT yêu cầu đã duyệt dưới đây.\n"
+            "NGỮ CẢNH: Chỉ các dữ kiện trong khối REQUIREMENT và SCENARIOS là bằng chứng.\n"
+            "ĐỊNH DẠNG: Trả đúng JSON TestCaseDraft; không viết giải thích ngoài JSON.\n\n"
+            "REQUIREMENT:\n"
             f"- id: {requirement.id}\n"
             f"- title: {requirement.title}\n"
             f"- actor: {requirement.actor or '—'}\n"
             f"- precondition: {requirement.precondition or '—'}\n"
+            f"- main_flow: {' | '.join(requirement.main_flow) or '—'}\n"
+            f"- alternative_flows: {' | '.join(requirement.alternative_flows) or '—'}\n"
             f"- action: {requirement.action}\n"
             f"- expected_outcome: {requirement.expected_outcome or '—'}\n"
+            f"- postconditions: {' | '.join(requirement.postconditions) or '—'}\n"
+            f"- business_rules: {' | '.join(requirement.business_rules) or '—'}\n"
             f"- constraints: {', '.join(requirement.constraints) or '—'}"
+        )
+        prompt += "\n- scenarios (controlled, use scenario_id exactly):\n" + "\n".join(
+            f"  - {scenario.id}: {scenario.title}; flow={' | '.join(scenario.flow)}; expected={scenario.expected_result or '—'}"
+            for scenario in scenarios
+        )
+        prompt += (
+            "\n\nCÁCH LẬP KẾ HOẠCH: Trước khi xuất JSON, hãy lập coverage plan nội bộ: "
+            "(1) giữ một positive case cho mỗi scenario; (2) tìm rule, alternative flow, trạng thái hoặc lớp dữ liệu "
+            "được nêu rõ để tạo case khác biệt; (3) kiểm tra mọi oracle có nguồn. "
+            "Hai case chỉ khác tên hoặc lặp lại cùng action/data/state không được xem là khác biệt."
+        )
+        if expanded:
+            prompt += (
+                "\n\nCHẾ ĐỘ EXPANDED (cần người duyệt):\n"
+                "- Mục tiêu: trả 6–10 case KHÁC BIỆT. Phân bổ trước: ít nhất một happy path; sau đó ưu tiên "
+                "validation/error đã nêu, alternative flow đã nêu, business rule, state transition hoặc boundary có căn cứ.\n"
+                "- Sau các case có căn cứ, chủ động áp dụng exploratory testing: validation/blank/whitespace, boundary, "
+                "Unicode/ký tự đặc biệt, thao tác lặp, state reload/back, empty/loading/error state, keyboard/focus, responsive UI.\n"
+                "- Nếu một scenario hữu ích nhưng requirement chưa nêu phản ứng/expected result, vẫn có thể đề xuất "
+                "NHƯNG phải đặt review_required=true, review_note nêu rõ giả định cần xác nhận, và không được mô tả "
+                "giả định đó như requirement đã được chứng minh.\n"
+                "- Với ứng viên chưa có oracle: để expected_result rỗng. Case có đầy đủ căn cứ phải đặt "
+                "review_required=false. Không tạo case trùng lặp."
+            )
+        return prompt
+
+    @classmethod
+    def _expanded_retry_prompt(cls, requirement: StructuredRequirement, scenarios, received: int) -> str:
+        """Ask once more when an expanded response did not meet its contract."""
+        return cls._build_user_prompt(requirement, scenarios, expanded=True) + (
+            f"\n\nLần trả lời trước chỉ có {received} test case. Hãy trả về TỪ 6 ĐẾN 10 test case PHÂN BIỆT. "
+            "Giữ ít nhất một positive case bám requirement. Với biến thể validation, alternative hoặc state "
+            "chưa có expected result trong requirement, không được bịa oracle: đặt expected_result rỗng, "
+            "review_required=true và review_note giải thích chính xác điều cần người duyệt xác nhận."
         )

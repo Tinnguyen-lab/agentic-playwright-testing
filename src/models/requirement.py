@@ -46,8 +46,12 @@ class StructuredRequirement(BaseModel):
     title: str
     actor: str | None = None
     precondition: str | None = None
+    main_flow: list[str] = Field(default_factory=list)
+    alternative_flows: list[str] = Field(default_factory=list)
     action: str
     expected_outcome: str | None = None
+    postconditions: list[str] = Field(default_factory=list)
+    business_rules: list[str] = Field(default_factory=list)
     constraints: list[str] = Field(default_factory=list)
     source_excerpt: str = ""
     ambiguities: list[AmbiguityFinding] = Field(default_factory=list)
