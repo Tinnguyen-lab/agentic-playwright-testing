@@ -81,7 +81,9 @@ class OpenAILLMClient:
         else:
             from openai import OpenAI
 
-            self._client = OpenAI(api_key=api_key or "local", base_url=base_url or None)
+            # Explicit official endpoint avoids transport implementations treating an empty
+            # base_url as a relative URL on Windows.
+            self._client = OpenAI(api_key=api_key or "local", base_url=base_url or "https://api.openai.com/v1")
 
     def structured_completion(self, system_prompt: str, user_prompt: str, schema: type[T]) -> T:
         json_schema = schema.model_json_schema()

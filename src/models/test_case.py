@@ -14,6 +14,9 @@ class TestType(str, Enum):
     POSITIVE = "positive"
     NEGATIVE = "negative"
     BOUNDARY = "boundary"
+    EQUIVALENCE_PARTITION = "equivalence_partition"
+    STATE_TRANSITION = "state_transition"
+    EXPLORATORY = "exploratory"
     ERROR_GUESSING = "error_guessing"
     ALTERNATIVE_FLOW = "alternative_flow"
 

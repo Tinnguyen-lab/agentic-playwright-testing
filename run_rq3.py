@@ -167,8 +167,10 @@ def main(argv: list[str] | None = None) -> int:
     for arm, s in summary.items():
         print(f"=== {arm:13} technical sửa được {s['tech_repaired']}/{s['tech_n']} | semantic bị che {s['sem_masked']}/{s['sem_n']} "
               f"| escalate {s['escalated']} | làm yếu assertion {s['weakened']}")
-    Path(args.out).write_text(json.dumps({"model": model, "budget": BUDGET, "summary": summary, "cases": rows},
-                                         ensure_ascii=False, indent=2), encoding="utf-8")
+    output_path = Path(args.out)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps({"model": model, "budget": BUDGET, "summary": summary, "cases": rows},
+                                      ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[✓] JSON: {args.out}")
     return 0
 

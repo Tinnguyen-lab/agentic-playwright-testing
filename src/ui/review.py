@@ -11,14 +11,16 @@ from src.models.test_case import TestCase, TestStep
 _EXPECT = {ActionType.EXPECT_URL, ActionType.EXPECT_VISIBLE, ActionType.EXPECT_TEXT}
 
 
-def approved_requirement_ids(requirements, decisions: list[ApprovalDecision]) -> list[str]:
+def approved_requirement_ids(requirements, decisions: list[ApprovalDecision],
+                             versions: dict[str, int] | None = None) -> list[str]:
     """ID các yêu cầu mà quyết định MỚI NHẤT là APPROVED (AG-01)."""
-    return [r.id for r in requirements if is_approved(decisions, r.id)]
+    return [r.id for r in requirements if is_approved(decisions, r.id, (versions or {}).get(r.id))]
 
 
-def approved_test_case_ids(test_cases, decisions: list[ApprovalDecision]) -> list[str]:
+def approved_test_case_ids(test_cases, decisions: list[ApprovalDecision],
+                           versions: dict[str, int] | None = None) -> list[str]:
     """ID các test case đã duyệt (AG-02)."""
-    return [tc.id for tc in test_cases if is_approved(decisions, tc.id)]
+    return [tc.id for tc in test_cases if is_approved(decisions, tc.id, (versions or {}).get(tc.id))]
 
 
 def repair_gate(old: PlaywrightPlan, new: PlaywrightPlan, changed_kinds: list[str]) -> str:

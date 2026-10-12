@@ -32,3 +32,10 @@ that exercise the same risk (for example, several password mutations with no dif
 Produce six to ten useful cases when the requirement is sufficiently rich. Include at least one
 requirement-backed positive flow when available; use the remaining budget for the most relevant risks.
 Include UI/UX or resilience only as clearly-labelled exploratory charters when they are applicable.
+
+## Required taxonomy
+
+For every generated suite, represent these techniques with a case of the matching type whenever the
+target has an applicable interaction: `negative`, `error_guessing`, `boundary`,
+`equivalence_partition`, `state_transition`, and `exploratory`. A case may be an exploratory
+charter when its exact oracle is unknown; it must then be review-gated.

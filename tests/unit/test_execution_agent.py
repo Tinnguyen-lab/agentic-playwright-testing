@@ -1,6 +1,6 @@
 """Test phân loại trạng thái execution (thuần, offline)."""
-from src.agents.execution_agent import classify_status
-from src.models.playwright_artifacts import ExecStatus
+from src.agents.execution_agent import ExecutionAgent, classify_status
+from src.models.playwright_artifacts import ExecStatus, GeneratedScript
 
 
 def test_classify_passed():
@@ -17,3 +17,16 @@ def test_classify_failed_on_timeout():
 
 def test_classify_error_otherwise():
     assert classify_status(1, "", "ModuleNotFoundError: No module named 'x'") == ExecStatus.ERROR
+
+
+def test_execution_keeps_isolated_evidence_for_each_run(tmp_path):
+    agent = ExecutionAgent()
+    script = GeneratedScript(test_case_id="REQ 1/TC", code="print('PASSED')")
+    first = agent.run(script, tmp_path)
+    second = agent.run(script, tmp_path)
+    assert first.status == second.status == ExecStatus.PASSED
+    assert first.artifact_dir != second.artifact_dir
+    for result in (first, second):
+        assert any(path.endswith("generated_test.py") for path in result.artifacts)
+        assert any(path.endswith("stdout.log") for path in result.artifacts)
+        assert any(path.endswith("stderr.log") for path in result.artifacts)

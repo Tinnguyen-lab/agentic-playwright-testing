@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import jinja2
 
@@ -16,12 +17,17 @@ expect.set_options(timeout=10_000)  # trang demo có phần tử chờ ~5s (dyna
 def run():
     with sync_playwright() as p:
         browser = p.chromium.launch(args=["--disable-http2"])  # HTTP/2 tới heroku bị treo ở một số mạng
-        page = browser.new_page()
+        context = browser.new_context()
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+        page = context.new_page()
         page.set_default_timeout(10_000)  # thao tác (click/fill); điều hướng giữ 30s
         page.set_default_navigation_timeout(30_000)
-        {{ body }}
-        page.screenshot(path={{ screenshot }})
-        browser.close()
+        try:
+            {{ body }}
+        finally:
+            page.screenshot(path={{ screenshot }})
+            context.tracing.stop(path={{ trace }})
+            browser.close()
 
 
 if __name__ == "__main__":
@@ -78,5 +84,6 @@ def _action_line(action) -> str:
 
 
 def render_script(plan: PlaywrightPlan, screenshot: str = "screenshot.png") -> str:
-    body = "\n        ".join(_action_line(a) for a in plan.actions)
-    return _SKELETON.render(body=body, screenshot=_lit(screenshot))
+    body = "\n            ".join(_action_line(a) for a in plan.actions)
+    trace = str(Path(screenshot).with_suffix(".zip"))
+    return _SKELETON.render(body=body, screenshot=_lit(screenshot), trace=_lit(trace))

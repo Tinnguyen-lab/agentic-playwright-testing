@@ -186,19 +186,8 @@ class TestDesignAgent:
 
     @staticmethod
     def _exploratory_candidates(requirement: StructuredRequirement, existing_cases: list[TestCase]) -> list[TestCase]:
-        """Add non-evidentiary QA heuristics to the Expanded review queue only."""
+        """Guarantee a review-gated portfolio of named testing techniques."""
         needed = max(0, MIN_EXPANDED_CASES - len(existing_cases))
-        text = " ".join(filter(None, [
-            requirement.title, requirement.action, requirement.expected_outcome,
-            *requirement.main_flow, *requirement.alternative_flows,
-            *requirement.business_rules, *requirement.constraints,
-        ])).casefold()
-        input_related = any(token in text for token in (
-            "nhập", "điền", "đăng nhập", "mật khẩu", "email", "tìm", "search", "form", "field",
-        ))
-        collection_related = any(token in text for token in (
-            "tìm", "search", "lọc", "filter", "sản phẩm", "danh sách", "kết quả", "hiển thị",
-        ))
 
         def idea(title: str, test_type: TestType, action: str, focus: str) -> TestCase:
             return TestCase(
@@ -210,48 +199,36 @@ class TestDesignAgent:
                              "Reviewer must define target-specific setup, expected result and acceptance criteria before approval."),
             )
 
-        existing_text = " ".join(f"{case.title} {case.review_note}" for case in existing_cases).casefold()
-        has_keyboard_ux = any(token in existing_text for token in ("bàn phím", "keyboard", "focus", "viewport", "responsive"))
-        has_recovery = any(token in existing_text for token in ("tải lại", "reload", "loading", "chậm", "quay lại", "back"))
-        diversity: list[TestCase] = []
-        if not has_keyboard_ux:
-            diversity.append(idea("Dùng bàn phím và focus", TestType.ERROR_GUESSING,
-                                  "Hoàn tất tác vụ chỉ bằng bàn phím; kiểm tra thứ tự focus và cách nhận biết lỗi/trạng thái.",
-                                  "keyboard accessibility and UX"))
-        if not has_recovery:
-            diversity.append(idea("Khả năng phục hồi khi tải chậm", TestType.ALTERNATIVE_FLOW,
-                                  "Quan sát hành vi khi phản hồi chậm, tải lại hoặc chuyển trang trong lúc tác vụ đang xử lý.",
-                                  "loading, recovery and user feedback"))
-
-        candidates: list[TestCase] = []
-        if input_related:
-            candidates.extend([
-                idea("Dữ liệu trống và khoảng trắng", TestType.ERROR_GUESSING,
-                     "Thử gửi tác vụ với trường đầu vào liên quan để trống hoặc chỉ có khoảng trắng.",
-                     "validation and error-message clarity"),
-                idea("Biên dữ liệu và ký tự đặc biệt", TestType.BOUNDARY,
-                     "Thử giá trị rất ngắn, rất dài, Unicode và ký tự đặc biệt ở các trường đầu vào liên quan.",
-                     "boundary-value and robustness"),
-                idea("Thao tác lặp nhanh", TestType.ERROR_GUESSING,
-                     "Thử submit/click hành động chính hai lần nhanh liên tiếp.",
-                     "duplicate submission and idempotency"),
-            ])
-        if collection_related:
-            candidates.extend([
-                idea("Trạng thái rỗng hoặc không có kết quả", TestType.ALTERNATIVE_FLOW,
-                     "Thử truy vấn hoặc điều kiện không tạo ra dữ liệu hiển thị.", "empty-state UX"),
-                idea("Tính ổn định khi đổi trạng thái", TestType.ALTERNATIVE_FLOW,
-                     "Thử quay lại, tải lại trang hoặc đổi filter sau khi hoàn tất tác vụ.",
-                     "state persistence and recovery"),
-            ])
-        candidates.extend([
-            idea("Hiển thị trên kích thước hẹp", TestType.ERROR_GUESSING,
-                 "Kiểm tra thao tác và thông báo trên viewport hẹp/màn hình nhỏ.",
-                 "responsive UI and readability"),
-        ])
-        # Preserve at least one UX/accessibility and one resilience idea even
-        # when the LLM already filled the numeric quota with input variations.
-        return diversity + candidates[:max(needed, 0)]
+        existing_types = {case.type for case in existing_cases}
+        taxonomy = [
+            idea("Negative testing", TestType.NEGATIVE,
+                 "Thử một dữ liệu hoặc điều kiện không hợp lệ liên quan trực tiếp đến tác vụ.",
+                 "negative testing"),
+            idea("Error guessing", TestType.ERROR_GUESSING,
+                 "Dựa trên lỗi thường gặp, thử để trống, khoảng trắng, thao tác lặp hoặc dữ liệu bất thường phù hợp.",
+                 "error guessing"),
+            idea("Giá trị biên", TestType.BOUNDARY,
+                 "Xác định giới hạn đầu vào hoặc số lượng liên quan; thử ngay tại biên và ngay ngoài biên.",
+                 "boundary value analysis"),
+            idea("Phân vùng tương đương", TestType.EQUIVALENCE_PARTITION,
+                 "Chọn một đại diện cho mỗi lớp dữ liệu hợp lệ, không hợp lệ và rỗng có liên quan.",
+                 "equivalence partitioning"),
+            idea("Chuyển vùng trạng thái", TestType.STATE_TRANSITION,
+                 "Thử tác vụ khi trạng thái trước/sau khác nhau, như mới vào trang, đã thao tác, tải lại hoặc quay lại.",
+                 "state-transition testing"),
+            idea("Khám phá UI/UX và accessibility", TestType.EXPLORATORY,
+                 "Dùng bàn phím, kiểm tra focus, thông báo, viewport hẹp và khả năng hoàn tất nhiệm vụ của người dùng.",
+                 "exploratory UI/UX and accessibility"),
+        ]
+        missing_techniques = [case for case in taxonomy if case.type not in existing_types]
+        # When the LLM already covers the taxonomy, retain a small extra budget
+        # for a separate resilience charter rather than cosmetic data mutations.
+        extras = [
+            idea("Khả năng phục hồi", TestType.ALTERNATIVE_FLOW,
+                 "Quan sát hành vi khi phản hồi chậm, tải lại hoặc chuyển trang trong lúc tác vụ đang xử lý.",
+                 "loading, recovery and user feedback"),
+        ]
+        return missing_techniques + extras[:max(0, needed - len(missing_techniques))]
 
     @staticmethod
     def _build_user_prompt(requirement: StructuredRequirement, scenarios=None, expanded: bool = True) -> str:
@@ -291,8 +268,8 @@ class TestDesignAgent:
                 "\n\nCHẾ ĐỘ EXPANDED (cần người duyệt):\n"
                 "- Mục tiêu: trả 6–10 case KHÁC BIỆT. Phân bổ trước: ít nhất một happy path; sau đó ưu tiên "
                 "validation/error đã nêu, alternative flow đã nêu, business rule, state transition hoặc boundary có căn cứ.\n"
-                "- Sau các case có căn cứ, chủ động áp dụng exploratory testing: validation/blank/whitespace, boundary, "
-                "Unicode/ký tự đặc biệt, thao tác lặp, state reload/back, empty/loading/error state, keyboard/focus, responsive UI.\n"
+                "- Bắt buộc bao phủ và gán đúng type khi phù hợp: negative, error_guessing, boundary, "
+                "equivalence_partition, state_transition, exploratory (UI/UX/accessibility).\n"
                 "- Nếu một scenario hữu ích nhưng requirement chưa nêu phản ứng/expected result, vẫn có thể đề xuất "
                 "NHƯNG phải đặt review_required=true, review_note nêu rõ giả định cần xác nhận, và không được mô tả "
                 "giả định đó như requirement đã được chứng minh.\n"

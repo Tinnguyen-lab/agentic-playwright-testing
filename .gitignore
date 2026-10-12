@@ -24,6 +24,9 @@ playwright-report/
 blob-report/
 
 # Runtime artifacts
+artifacts/
+.playwright-cli/
+validation-output/
 artifacts/logs/*
 artifacts/screenshots/*
 artifacts/traces/*

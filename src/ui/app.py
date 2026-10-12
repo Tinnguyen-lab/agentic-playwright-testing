@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 import uuid
 from pathlib import Path
 
@@ -31,10 +32,12 @@ from src.models.playwright_artifacts import (
     ActionType, ExecStatus, ExecutionResult, GeneratedScript, GroundingRecord, LocatorStrategy, PlaywrightAction,
     PlaywrightPlan,
 )
+from src.models.approval import is_approved
 from src.models.repair import RepairDraft
 from src.models.test_case import TestCase, TestCaseDraft, TestType
 from src.repositories.store import Store
 from src.services.browser_tasks import run_task
+from src.services.document_loader import load_document
 from src.services.script_template import render_script
 from src.ui.review import approved_requirement_ids, approved_test_case_ids, edited_test_case, repair_gate
 from src.utils.cli import resolve_client
@@ -83,7 +86,7 @@ def decide(gate: str, kind: str, artifact_id: str, approved: bool, version: int 
     log("decision", gate=gate, artifact=artifact_id, approved=approved)
 
 
-def generate(tc: TestCase) -> None:
+def generate(tc: TestCase) -> bool:
     """DOM-aware: aria snapshot trang đích → LLM → grounding trên trang thật → nếu locator khớp != 1 thì sinh lại 1 lần."""
     snap = run_task("snapshot", {"url": BASE_URL}).get("snapshot", "")
     client, model = _client(_plan_mock(BASE_URL))
@@ -93,8 +96,13 @@ def generate(tc: TestCase) -> None:
     if (fb := grounding_feedback(plan, records)) is not None:
         plan = agent.plan(tc, BASE_URL, page_context=snap or None, feedback=fb)
         records = _ground(plan)
+    if any(not record.ok for record in records):
+        log("generation_blocked_grounding", tc=tc.id,
+            invalid_actions=[record.action_index for record in records if not record.ok])
+        return False
     save_plan(tc.id, plan, records)
     log("generate_script", tc=tc.id, refined=fb is not None)
+    return True
 
 
 def _ground(plan: PlaywrightPlan) -> list[GroundingRecord]:
@@ -106,6 +114,17 @@ def save_plan(tc_id: str, plan: PlaywrightPlan, records=None) -> int:
     script = GeneratedScript(test_case_id=tc_id, code=render_script(plan, screenshot=f"{tc_id}.png"),
                              grounding=records or [])
     return store.save_script(pid, plan, script)
+
+
+def save_grounded_plan(tc_id: str, plan: PlaywrightPlan) -> bool:
+    """Persist a manually edited or repaired plan only after live grounding."""
+    records = _ground(plan)
+    if any(not record.ok for record in records):
+        log("plan_save_blocked_grounding", tc=tc_id,
+            invalid_actions=[record.action_index for record in records if not record.ok])
+        return False
+    save_plan(tc_id, plan, records)
+    return True
 
 
 def execute(tc_id: str) -> None:
@@ -146,19 +165,32 @@ with st.sidebar:
     PROJECT = st.text_input("Dự án", value="ShopLab")
     BASE_URL = st.text_input("URL ứng dụng đích", value="http://127.0.0.1:5100/login")
     BACKEND = st.selectbox("LLM backend", ["mock (offline)", "local (.env)", "cloud (.env.cloud)"])
+    DESIGN_MODE = "Expanded — cần duyệt"
+    st.caption("Thiết kế test: Expanded — các case thiếu oracle phải được người duyệt xác nhận.")
+    if BACKEND.startswith("mock"):
+        st.caption("Mock offline always returns a fixed number of cases; choose local/cloud for expanded generation.")
     st.caption(f"Phiên: `{SID}`")
     st.divider()
     st.header("📄 Tài liệu yêu cầu")
-    mode = st.radio("Nguồn", ["Tài liệu mẫu", "Dán văn bản", "Tải lên (.txt/.md)"])
+    mode = st.radio("Nguồn", ["Tài liệu mẫu", "Dán văn bản", "Tải lên (DOCX/PDF/TXT/MD)"])
     doc_text = ""
     if mode == "Tài liệu mẫu":
         doc_text = SAMPLE.read_text(encoding="utf-8") if SAMPLE.exists() else ""
     elif mode == "Dán văn bản":
         doc_text = st.text_area("Nội dung", height=200, placeholder="Dán tài liệu yêu cầu...")
     else:
-        up = st.file_uploader("Tệp .txt/.md", type=["txt", "md"])
+        up = st.file_uploader("Tệp yêu cầu", type=["docx", "pdf", "txt", "md"])
         if up:
-            doc_text = up.read().decode("utf-8", errors="ignore")
+            suffix = Path(up.name).suffix.lower()
+            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp:
+                temp.write(up.getvalue())
+                temp_path = Path(temp.name)
+            try:
+                doc_text = load_document(temp_path).text
+            except Exception as exc:
+                st.error(f"Không đọc được tài liệu: {exc}")
+            finally:
+                temp_path.unlink(missing_ok=True)
     run_req = st.button("① Phân tích yêu cầu", type="primary", use_container_width=True)
 
 pid = store.get_or_create_project(PROJECT, BASE_URL)
@@ -167,16 +199,24 @@ if not st.session_state.get("started"):
     log("session_start")
 
 st.title("🧪 Agentic Playwright")
-st.caption("Agent chỉ ĐỀ XUẤT; con người quyết định ở các cổng AG-01..05. Mọi quyết định và thao tác được lưu DB.")
+st.caption("Agent chỉ ĐỀ XUẤT; con người quyết định ở các cổng AG-01..AG-08. Mọi quyết định và thao tác được lưu DB.")
 
 if run_req:
     if doc_text.strip():
         with st.spinner("Đang phân tích yêu cầu..."):
-            client, model = _client(default_mock_extraction())
-            result = RequirementAnalysisAgent(client, model_name=model).analyze(doc_text, source_name="ui")
-        store.save_requirements(pid, result.requirements, source_name="ui")
-        st.session_state.global_amb = [a.description for a in result.global_ambiguities]
-        log("analyze", n=len(result.requirements))
+            try:
+                client, model = _client(default_mock_extraction())
+                result = RequirementAnalysisAgent(client, model_name=model).analyze(doc_text, source_name="ui")
+            except Exception as exc:
+                # Do not expose a provider traceback (or credential details) in
+                # the reviewer UI. The reviewer can retry after configuration is
+                # corrected; no requirement/approval is persisted on failure.
+                log("analyze_failed", error_type=type(exc).__name__)
+                st.error("Không thể gọi LLM. Kiểm tra API key, base URL và quota rồi thử lại.")
+            else:
+                store.save_requirements(pid, result.requirements, source_name="ui")
+                st.session_state.global_amb = [a.description for a in result.global_ambiguities]
+                log("analyze", n=len(result.requirements))
     else:
         st.warning("Chưa có nội dung tài liệu.")
 
@@ -210,7 +250,7 @@ with tab_flow:
         st.warning(f"🔺 Mâu thuẫn toàn cục: {g}")
 
     # ② AG-02
-    approved_reqs = approved_requirement_ids(reqs, d1)
+    approved_reqs = approved_requirement_ids(reqs, d1, rv)
     st.subheader(f"② Test case — {len(approved_reqs)}/{len(reqs)} yêu cầu đã duyệt · cổng AG-02")
     if not approved_reqs:
         st.info("Duyệt ít nhất một yêu cầu ở trên.")
@@ -231,6 +271,10 @@ with tab_flow:
         with st.container(border=True):
             c1, c2, c3 = st.columns([6, 1, 1])
             c1.markdown(f"`{tc.id}` v{tv[tc.id]} · **{tc.type.value}** · {tc.title} — {badge(d2, tc.id)}")
+            if tc.scenario_id:
+                c1.caption(f"Scenario: {tc.scenario_id}")
+            if tc.review_required:
+                c1.warning(f"Cần xác nhận: {tc.review_note or 'Case này có giả định ngoài requirement.'}")
             if c2.button("Duyệt", key=f"aptc_{tc.id}", use_container_width=True):
                 decide("AG-02", "test_case", tc.id, True, tv[tc.id])
                 st.rerun()
@@ -248,20 +292,29 @@ with tab_flow:
                         st.rerun()
 
     # ③ sinh + chạy
-    approved_tcs = [tc for tc in tcs if tc.id in approved_test_case_ids(tcs, d2)]
+    approved_tcs = [tc for tc in tcs if tc.id in approved_test_case_ids(tcs, d2, tv)]
     st.subheader(f"③ Sinh script và chạy — {len(approved_tcs)} test case đã duyệt")
     scripts, runs = store.latest_scripts(pid), store.latest_executions(pid)
     for tc in approved_tcs:
         with st.container(border=True):
             row, run = scripts.get(tc.id), runs.get(tc.id)
             status = f"{'✅' if run.status == 'passed' else '❌'} {run.status}" if run else "chưa chạy"
-            c1, c2, c3 = st.columns([5, 1, 1])
-            c1.markdown(f"`{tc.id}` {tc.title} · script: {f'v{row.version}' if row else '—'} · {status}")
+            d8 = store.decisions(pid, "AG-08")
+            script_approved = bool(row and is_approved(d8, tc.id, row.version))
+            c1, c2, c3, c4 = st.columns([4, 1, 1, 1])
+            review_state = "✅ script đã duyệt" if script_approved else "⏳ chờ duyệt script"
+            c1.markdown(f"`{tc.id}` {tc.title} · script: {f'v{row.version}' if row else '—'} · {review_state} · {status}")
             if c2.button("Sinh script", key=f"g_{tc.id}", use_container_width=True):
                 with st.spinner("Snapshot → LLM → grounding..."):
-                    generate(tc)
+                    saved = generate(tc)
+                if not saved:
+                    st.error("Script was not saved: grounding still has unmatched locators. Edit and approve the test case before trying again.")
+                    st.stop()
                 st.rerun()
-            if row and c3.button("Chạy", key=f"x_{tc.id}", use_container_width=True):
+            if row and c3.button("Approve script", key=f"aps_{tc.id}", use_container_width=True):
+                decide("AG-08", "script", tc.id, True, row.version)
+                st.rerun()
+            if row and c4.button("Chạy", key=f"x_{tc.id}", use_container_width=True, disabled=not script_approved):
                 with st.spinner("Đang chạy..."):
                     execute(tc.id)
                 st.rerun()
@@ -279,13 +332,23 @@ with tab_flow:
                         except Exception as e:
                             st.error(f"Plan không hợp lệ: {e}")
                         else:
-                            save_plan(tc.id, new_plan)
+                            if not save_grounded_plan(tc.id, new_plan):
+                                st.error("Không lưu plan: grounding có locator không khớp đúng một phần tử.")
+                                st.stop()
                             log("edit_plan", tc=tc.id)
                             st.rerun()
                     st.code(row.code, language="python")
-            shot = WORKDIR / f"{tc.id}.png"
-            if run and shot.exists():
-                st.image(str(shot), width=420)
+            if run:
+                # ExecutionAgent creates an isolated artifact directory per run.
+                # Read the persisted paths instead of guessing the legacy shared
+                # screenshot location, so evidence remains visible after retries.
+                artifact_paths = [Path(p) for p in json.loads(run.artifacts_json)]
+                screenshots = [p for p in artifact_paths if p.suffix.lower() == ".png" and p.exists()]
+                traces = [p for p in artifact_paths if p.suffix.lower() == ".zip" and p.exists()]
+                if screenshots:
+                    st.image(str(screenshots[-1]), width=420)
+                if traces:
+                    st.caption(f"Trace: {traces[-1]}")
 
     # ④ sửa lỗi có ràng buộc
     failed = [tc for tc in approved_tcs if tc.id in runs and runs[tc.id].status != "passed"]
@@ -309,8 +372,10 @@ with tab_flow:
             st.code(p.diff or "(không có diff)", language="diff")
             b1, b2 = st.columns(2)
             if b1.button("Duyệt và chạy lại", key=f"rap_{rid}", disabled=p.new_plan is None or p.outcome.value != "proposed"):
+                if not save_grounded_plan(p.test_case_id, p.new_plan):
+                    st.error("Không áp dụng repair: grounding có locator không khớp đúng một phần tử.")
+                    st.stop()
                 decide(gate, "repair", f"repair-{rid}", True)
-                save_plan(p.test_case_id, p.new_plan)
                 execute(p.test_case_id)
                 st.rerun()
             if b2.button("Từ chối", key=f"rre_{rid}"):

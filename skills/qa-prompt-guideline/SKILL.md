@@ -46,6 +46,9 @@ Give an exact range when coverage needs to be broader (for example, six to ten c
 requirement-backed coverage, use exploratory heuristics such as validation, boundaries, state
 transitions, duplicate submission, empty/loading states, keyboard accessibility and responsive UI;
 label those ideas for review rather than inventing their oracle.
+
+Use the runtime taxonomy: `negative`, `error_guessing`, `boundary`, `equivalence_partition`,
+`state_transition`, and `exploratory`. Show the technique explicitly in each generated case.
 say what makes cases distinct. If the model returns too few, retry once with the shortfall and
 the same evidence; do not silently pad the research baseline.
 

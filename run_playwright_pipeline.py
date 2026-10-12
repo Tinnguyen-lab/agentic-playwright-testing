@@ -94,7 +94,9 @@ def main(argv: list[str] | None = None) -> int:
             })
         browser.close()
 
-    Path(args.out).write_text(json.dumps(out_results, ensure_ascii=False, indent=2), encoding="utf-8")
+    output_path = Path(args.out)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(out_results, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n[✓] Đã ghi: {args.out}")
     return 0
 

@@ -143,7 +143,7 @@ Do đó, khoảng trống mà đề tài hướng đến là **thiếu một pip
 | RQ1: Structured requirement có cải thiện test case không? | GAP-01, GAP-02 | Requirement Analysis, Test Design, Traceability | Test-case validity, requirement coverage, unsupported-test rate, ambiguity resolution rate, số chỉnh sửa thủ công |
 | RQ2: DOM/accessibility grounding có cải thiện first-run execution không? | GAP-03 | UI Explorer/Grounder, Playwright Generator | Locator validity, locator uniqueness, first-run execution rate, element-not-found rate, tỷ lệ chạy đến assertion |
 | RQ3: Constrained repair có giữ nguyên ý nghĩa test không? | GAP-04, GAP-05 | Failure Classifier, Repair Policy, Human Approval | Repair success rate, semantic preservation rate, assertion weakening rate, approval rate, số vòng repair |
-| RQ4: Hệ thống giảm bao nhiêu công sức thủ công? | GAP-06 | Toàn bộ pipeline | Thời gian hoàn thành, số thao tác/chỉnh sửa, số approval, chi phí/token nếu áp dụng |
+| RQ4: Cổng xác nhận human-in-the-loop có ngăn script chạy được nhưng sai ngữ nghĩa không? | GAP-06 | Toàn bộ pipeline, approval và traceability | Script pass trên phiên bản đúng/fail trên mutation semantic, độ bao phủ hành vi, số can thiệp review, approval và truy vết |
 
 ## 8. Phạm vi tuyên bố novelty
 

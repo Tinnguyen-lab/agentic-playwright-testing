@@ -255,6 +255,7 @@ sequenceDiagram
 | AG-05 Test-step removal/change | Repair bỏ hoặc thay đổi nghiệp vụ của step | Test-case version | Approve hoặc reject |
 | AG-06 Traceability change | Thêm, xóa hoặc thay trace link đã duyệt | Trace-link version | Approve hoặc reject |
 | AG-07 Mark unexecutable | Agent đề xuất blocked/skip/unexecutable | Test-case execution status | Approve hoặc reject với lý do |
+| AG-08 Script verification | Sau DOM grounding, trước execution | Script version | Approve hoặc reject; approval không chuyển sang version script mới |
 
 Ngoài bảy điểm bắt buộc trên, MVP nên yêu cầu review khi thay test data có ý nghĩa nghiệp vụ hoặc khi Repair Agent không phân biệt được lỗi test với lỗi thật của ứng dụng.
 

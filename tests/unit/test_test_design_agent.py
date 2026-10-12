@@ -167,6 +167,21 @@ def test_expanded_keeps_one_representative_per_inferred_risk_type():
     assert [tc.title for tc in llm_risks] == ["Wrong password", "Unicode password"]
 
 
+def test_runtime_taxonomy_adds_each_required_testing_technique():
+    result = TestDesignAgent(MockLLMClient(TestCaseDraft())).design(_req())
+    required = {
+        TestType.NEGATIVE,
+        TestType.ERROR_GUESSING,
+        TestType.BOUNDARY,
+        TestType.EQUIVALENCE_PARTITION,
+        TestType.STATE_TRANSITION,
+        TestType.EXPLORATORY,
+    }
+    assert required.issubset({tc.type for tc in result.test_cases})
+    non_positive = [tc for tc in result.test_cases if tc.type != TestType.POSITIVE]
+    assert all(tc.review_required and not tc.expected_result for tc in non_positive)
+
+
 def test_design_adds_positive_fallback_when_llm_only_returns_negative():
     draft = TestCaseDraft(test_cases=[TestCase(title="Bad input", type=TestType.NEGATIVE)])
     result = TestDesignAgent(MockLLMClient(draft)).design(_req())

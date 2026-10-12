@@ -153,15 +153,15 @@ def rq3_results(r, res: dict, res_first: dict | None, notes):
 
 
 def rq4_results(r, rq4: dict | None, notes):
-    r.h2("5.4 RQ4: công sức thủ công")
+    r.h2("5.4 RQ4: chất lượng cổng xác nhận human-in-the-loop")
     if not rq4 or not rq4.get("rows"):
         for para in notes.RQ4_PENDING:
             r.p(para)
         return
-    rows = [[x["participant"], x["condition"], x["task"], str(x["minutes"]), str(x["valid_ucs"]),
-             str(x["manual_edits"] if x["manual_edits"] is not None else "—"), str(x["sus"])] for x in rq4["rows"]]
-    r.table("Kết quả từng người tham gia", ["Người", "Điều kiện", "Bộ", "Phút", "Yêu cầu có test hợp lệ", "Sửa tay", "SUS"],
-            rows, [2, 2.5, 1.5, 2, 3.5, 2, 2.5], center_cols=(0, 1, 2, 3, 4, 5, 6))
+    rows = [[x.get("reviewer", "—"), x.get("phase", "—"), x.get("task", "—"),
+             str(x.get("runnable_ucs", "—")), str(x.get("valid_ucs", "—"))] for x in rq4["rows"]]
+    r.table("Kết quả kiểm chứng theo phiên review", ["Người duyệt", "Pha", "Bộ", "UC chạy được", "UC hợp lệ ngữ nghĩa"],
+            rows, [3, 3, 1.5, 3, 4], center_cols=(0, 1, 2, 3, 4))
     for para in notes.RQ4:
         r.p(para)
 

@@ -33,6 +33,7 @@ CATALOG = "datasets/reference/rq2_targets.json"
 WORKDIR = Path("artifacts/exec_rq2")
 INFRA_HANG = "Page.goto: Timeout"
 SNAPSHOT_CHARS = 6000  # ponytail: cắt cứng, đủ cho trang demo; trang lớn cần lọc theo vùng
+SNAPSHOT_TIMEOUT_MS = 12_000
 
 
 def _error_line(stderr: str) -> str:
@@ -41,16 +42,38 @@ def _error_line(stderr: str) -> str:
     return (lines[-1] if lines else stderr.strip()[-200:])[:300]
 
 
-def _aria_snapshots(urls) -> dict[str, str]:
-    """Mở mỗi URL một lần, lấy aria snapshot của <body> (lỗi -> chuỗi rỗng = như baseline)."""
+def _failure_category(status: str, error: str) -> str:
+    """Stable failure taxonomy: separate test-generation errors from site noise."""
+    if status == "passed":
+        return "passed"
+    text = error.casefold()
+    if text.startswith("plan:"):
+        return "plan_generation"
+    if "strict mode violation" in text or "resolved to" in text:
+        return "ambiguous_locator"
+    if "timeout" in text:
+        return "timeout"
+    if any(x in text for x in ("net::", "err_connection", "name_not_resolved", "dns")):
+        return "infrastructure"
+    if "assert" in text or "expect" in text:
+        return "assertion"
+    return "execution_error"
+
+
+def _aria_snapshots(urls, timeout_ms: int = SNAPSHOT_TIMEOUT_MS) -> dict[str, str]:
+    """Mở mỗi URL một lần, lấy aria snapshot của <body> (lỗi -> chuỗi rỗng = như baseline).
+
+    ``networkidle`` không phù hợp cho catalog website công khai: tracker hoặc
+    long-polling có thể giữ kết nối mãi và làm cả benchmark kẹt ở pha chuẩn bị.
+    DOM đã sẵn sàng là đủ để cung cấp ngữ cảnh locator cho LLM.
+    """
     out = {}
     with sync_playwright() as p:
         browser = p.chromium.launch(args=["--disable-http2"])  # giống script_template
         page = browser.new_page()
         for url in dict.fromkeys(urls):
             try:
-                page.goto(url, timeout=30000)
-                page.wait_for_load_state("networkidle", timeout=10000)
+                page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
             except Exception:
                 pass
             try:
@@ -115,6 +138,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--mock", action="store_true", help="Offline smoke (plan dựng sẵn)")
     ap.add_argument("--catalog", default=CATALOG)
     ap.add_argument("--out", default="rq2_results.json")
+    ap.add_argument("--target-timeout", type=int, default=45,
+                    help="Giới hạn giây cho MỖI generated script; timeout được ghi blocked thay vì treo cả benchmark")
+    ap.add_argument("--snapshot-timeout", type=int, default=SNAPSHOT_TIMEOUT_MS,
+                    help="Giới hạn mili-giây khi lấy ARIA snapshot mỗi URL")
+    ap.add_argument("--max-targets", type=int, default=0,
+                    help="Chỉ chạy N target đầu để preflight; 0 = toàn bộ catalog")
     ap.add_argument("--context", choices=["none", "aria", "aria_loop", "both", "all", "oracle"], default="none",
                     help="none = baseline (chỉ test case); aria = kèm aria snapshot trang đích; aria_loop = aria + "
                          "grounding trên trang thật, locator khớp != 1 thì phản hồi để LLM sinh lại 1 lần; "
@@ -127,8 +156,11 @@ def main(argv: list[str] | None = None) -> int:
     WORKDIR.mkdir(parents=True, exist_ok=True)
 
     targets = _load_targets(args.catalog)
+    if args.max_targets:
+        targets = targets[:args.max_targets]
     conditions = {"both": ["none", "aria"], "all": ["none", "aria", "aria_loop"]}.get(args.context, [args.context])
-    snaps = _aria_snapshots([t[1] for t in targets]) if {"aria", "aria_loop"} & set(conditions) else {}
+    snaps = (_aria_snapshots([t[1] for t in targets], args.snapshot_timeout)
+             if {"aria", "aria_loop"} & set(conditions) else {})
     print(f"[i] {len(targets)} target | model={model} | context={conditions}")
 
     stack = contextlib.ExitStack()
@@ -138,6 +170,7 @@ def main(argv: list[str] | None = None) -> int:
     for cond in conditions:
         print(f"\n### context={cond}")
         by_site = defaultdict(lambda: [0, 0])
+        by_failure = defaultdict(int)
         rows = []
         for site, url, tc, oracle in targets:
             ctx = snaps.get(url) if cond in ("aria", "aria_loop") else None
@@ -148,23 +181,26 @@ def main(argv: list[str] | None = None) -> int:
                 if cond == "aria_loop":
                     plan, refined = _ground_and_refine(agent, browser, tc, url, ctx, plan)
                 script = GeneratedScript(test_case_id=tc.id, code=render_script(plan, screenshot=f"{tc.id}.png"))
-                result = executor.run(script, WORKDIR / cond)
+                result = executor.run(script, WORKDIR / cond, timeout=args.target_timeout)
                 if result.status.value != "passed" and INFRA_HANG in result.stderr:
                     # site demo treo khi tải trang = lỗi hạ tầng, không phải lỗi script -> chạy lại CÙNG script 1 lần
                     infra_retry = True
-                    result = executor.run(script, WORKDIR / cond)
+                    result = executor.run(script, WORKDIR / cond, timeout=args.target_timeout)
                 status, err = result.status.value, ("" if result.status.value == "passed" else _error_line(result.stderr))
             except Exception as e:  # LLM trả plan hỏng cũng tính là fail lần đầu
                 status, err = "error", f"plan: {e}"[:300]
             ok = status == "passed"
+            category = _failure_category(status, err)
             by_site[site][0] += ok
             by_site[site][1] += 1
             rows.append({"id": tc.id, "site": site, "url": url, "type": tc.type.value, "status": status, "error": err,
-                         "infra_retry": infra_retry, "refined": refined})
+                         "failure_category": category, "infra_retry": infra_retry, "refined": refined})
+            by_failure[category] += 1
             print(f"  [{tc.id:6}] {site:24} {status.upper():7} {err[:90]}")
         n, passed = len(rows), sum(r["status"] == "passed" for r in rows)
         results[cond] = {"n": n, "passed": passed, "first_run_pass_rate": passed / n if n else 0.0,
                          "by_site": {s: {"passed": v[0], "n": v[1]} for s, v in sorted(by_site.items())},
+                         "by_failure_category": dict(sorted(by_failure.items())),
                          "cases": rows}
 
     print("\n--- Theo site ---")
@@ -184,7 +220,9 @@ def main(argv: list[str] | None = None) -> int:
         out["paired_all"] = pairs
         out["paired"] = pairs.get("none__aria") or next(iter(pairs.values()))
         print(f"[i] Paired: {pairs}")
-    Path(args.out).write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    output_path = Path(args.out)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[✓] JSON: {args.out}")
     return 0
 

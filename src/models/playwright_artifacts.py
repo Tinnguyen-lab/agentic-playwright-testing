@@ -65,6 +65,8 @@ class ExecStatus(str, Enum):
 class ExecutionResult(BaseModel):
     test_case_id: str
     status: ExecStatus
+    run_id: str = ""
+    artifact_dir: str = ""
     exit_code: int = 0
     stdout: str = ""
     stderr: str = ""
