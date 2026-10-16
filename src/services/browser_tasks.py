@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -21,6 +22,10 @@ from src.services.locator_healing import heal_action, propose_candidates
 
 SNAPSHOT_CHARS = 4000
 LAUNCH_ARGS = ["--disable-http2"]  # giống script_template
+
+
+class BrowserTaskError(RuntimeError):
+    """Tác vụ trình duyệt thất bại; UI có thể hiển thị thông báo ngắn gọn."""
 
 
 def snapshot(page, chars: int = SNAPSHOT_CHARS) -> str:
@@ -141,8 +146,8 @@ def _task(name: str, payload: dict) -> dict:
         try:
             if name == "snapshot":
                 page = browser.new_page()
+                page.goto(payload["url"], wait_until="domcontentloaded", timeout=30000)
                 with contextlib.suppress(Exception):
-                    page.goto(payload["url"], timeout=30000)
                     page.wait_for_load_state("networkidle", timeout=8000)
                 return {"snapshot": snapshot(page, payload.get("chars", 6000))}
             plan = PlaywrightPlan.model_validate(payload["plan"])
@@ -159,13 +164,33 @@ def _task(name: str, payload: dict) -> dict:
 
 
 def run_task(name: str, payload: dict, timeout: int = 180) -> dict:
-    """Gọi tác vụ trong tiến trình con; lỗi trả {"error": ...} thay vì ném (UI hiển thị được)."""
-    proc = subprocess.run([sys.executable, "-m", "src.services.browser_tasks", name], input=json.dumps(payload),
-                          capture_output=True, text=True, encoding="utf-8", timeout=timeout,
-                          cwd=Path(__file__).resolve().parents[2])
+    """Chạy tác vụ ở tiến trình con; lỗi browser phải dừng luồng thay vì trả kết quả rỗng."""
+    child_env = os.environ.copy()
+    child_env["PYTHONUTF8"] = "1"
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-m", "src.services.browser_tasks", name],
+            input=json.dumps(payload), capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=timeout,
+            cwd=Path(__file__).resolve().parents[2], env=child_env,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise BrowserTaskError(f"Tác vụ {name} quá thời gian {timeout} giây") from exc
+    except OSError as exc:
+        raise BrowserTaskError(f"Không khởi chạy được tác vụ trình duyệt {name}") from exc
     if proc.returncode != 0:
-        return {"error": proc.stderr.strip().splitlines()[-1] if proc.stderr.strip() else f"exit {proc.returncode}"}
-    return json.loads(proc.stdout)
+        stderr = (proc.stderr or "").strip()
+        lines = [line.strip() for line in stderr.splitlines() if line.strip()]
+        detail = next(
+            (line for line in reversed(lines)
+             if line.startswith(("playwright._impl._errors.", "ValueError:", "RuntimeError:", "OSError:"))),
+            lines[-1] if lines else f"exit {proc.returncode}",
+        )
+        raise BrowserTaskError(detail)
+    try:
+        return json.loads(proc.stdout or "")
+    except json.JSONDecodeError as exc:
+        raise BrowserTaskError(f"Tác vụ {name} không trả JSON hợp lệ") from exc
 
 
 if __name__ == "__main__":

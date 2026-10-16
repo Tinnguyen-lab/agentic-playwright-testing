@@ -33,6 +33,7 @@ Hai file này không được commit. DB mặc định là SQLite `artifacts/app
 | Pipeline demo trên SauceDemo | `python run_full_pipeline.py` |
 
 Ở bước **③ Sinh script và chạy**, nút **Chạy** mở cửa sổ Chromium trên máy chạy Streamlit; cửa sổ tự đóng khi test kết thúc. Script đã lưu từ phiên bản cũ cũng được chạy ở chế độ hiển thị.
+Nếu giữ URL mặc định `http://127.0.0.1:5100/login`, hãy chạy ShopLab trước khi bấm **Sinh script**.
 
 ## Tái lập thực nghiệm
 

@@ -23,7 +23,9 @@ import streamlit as st
 
 from run_requirement_agent import default_mock_extraction
 from src.agents.execution_agent import ExecutionAgent, visible_browser_code
-from src.agents.playwright_generation_agent import PlaywrightGenerationAgent, grounding_feedback
+from src.agents.playwright_generation_agent import (
+    PlaywrightGenerationAgent, grounding_feedback, normalize_navigation_urls,
+)
 from src.agents.repair_agent import RepairAgent
 from src.agents.requirement_agent import RequirementAnalysisAgent
 from src.agents.test_design_agent import TestDesignAgent
@@ -36,7 +38,7 @@ from src.models.approval import is_approved
 from src.models.repair import RepairDraft
 from src.models.test_case import TestCase, TestCaseDraft, TestType
 from src.repositories.store import Store
-from src.services.browser_tasks import run_task
+from src.services.browser_tasks import BrowserTaskError, run_task
 from src.services.document_loader import load_document
 from src.services.script_template import render_script
 from src.ui.review import approved_requirement_ids, approved_test_case_ids, edited_test_case, repair_gate
@@ -72,6 +74,15 @@ def _client(mock_response):
 
 def log(event: str, **payload) -> None:
     store.log_event(pid, SID, event, actor=ACTOR, **payload)
+
+
+def show_browser_task_error(exc: BrowserTaskError, tc_id: str) -> None:
+    detail = str(exc)
+    log("browser_task_failed", tc=tc_id, error=detail[:300])
+    if "ERR_CONNECTION_REFUSED" in detail:
+        st.error(f"Không thể kết nối website đích {BASE_URL}. Hãy chạy ứng dụng đích rồi thử lại.")
+    else:
+        st.error(f"Không thể khảo sát website đích: {detail}")
 
 
 def badge(decisions, artifact_id: str) -> str:
@@ -111,6 +122,7 @@ def _ground(plan: PlaywrightPlan) -> list[GroundingRecord]:
 
 
 def save_plan(tc_id: str, plan: PlaywrightPlan, records=None) -> int:
+    plan = normalize_navigation_urls(plan, BASE_URL)
     script = GeneratedScript(test_case_id=tc_id, code=render_script(plan, screenshot=f"{tc_id}.png"),
                              grounding=records or [])
     return store.save_script(pid, plan, script)
@@ -118,6 +130,7 @@ def save_plan(tc_id: str, plan: PlaywrightPlan, records=None) -> int:
 
 def save_grounded_plan(tc_id: str, plan: PlaywrightPlan) -> bool:
     """Persist a manually edited or repaired plan only after live grounding."""
+    plan = normalize_navigation_urls(plan, BASE_URL)
     records = _ground(plan)
     if any(not record.ok for record in records):
         log("plan_save_blocked_grounding", tc=tc_id,
@@ -310,8 +323,12 @@ with tab_flow:
             review_state = "✅ script đã duyệt" if script_approved else "⏳ chờ duyệt script"
             c1.markdown(f"`{tc.id}` {tc.title} · script: {f'v{row.version}' if row else '—'} · {review_state} · {status}")
             if c2.button("Sinh script", key=f"g_{tc.id}", use_container_width=True):
-                with st.spinner("Snapshot → LLM → grounding..."):
-                    saved = generate(tc)
+                try:
+                    with st.spinner("Snapshot → LLM → grounding..."):
+                        saved = generate(tc)
+                except BrowserTaskError as exc:
+                    show_browser_task_error(exc, tc.id)
+                    st.stop()
                 if not saved:
                     st.error("Script was not saved: grounding still has unmatched locators. Edit and approve the test case before trying again.")
                     st.stop()
@@ -337,7 +354,12 @@ with tab_flow:
                         except Exception as e:
                             st.error(f"Plan không hợp lệ: {e}")
                         else:
-                            if not save_grounded_plan(tc.id, new_plan):
+                            try:
+                                grounded = save_grounded_plan(tc.id, new_plan)
+                            except BrowserTaskError as exc:
+                                show_browser_task_error(exc, tc.id)
+                                st.stop()
+                            if not grounded:
                                 st.error("Không lưu plan: grounding có locator không khớp đúng một phần tử.")
                                 st.stop()
                             log("edit_plan", tc=tc.id)
@@ -362,8 +384,12 @@ with tab_flow:
     st.subheader(f"④ Sửa lỗi có ràng buộc — {len(failed)} test lỗi · {len(pending)} đề xuất chờ duyệt")
     for tc in failed:
         if not any(p.test_case_id == tc.id for _, p in pending) and st.button(f"Đề xuất sửa cho {tc.id}", key=f"r_{tc.id}"):
-            with st.spinner("Dò bước hỏng → self-healing → LLM có ràng buộc..."):
-                propose_repair(tc)
+            try:
+                with st.spinner("Dò bước hỏng → self-healing → LLM có ràng buộc..."):
+                    propose_repair(tc)
+            except BrowserTaskError as exc:
+                show_browser_task_error(exc, tc.id)
+                st.stop()
             st.rerun()
     for rid, p in pending:
         old = PlaywrightPlan.model_validate_json(scripts[p.test_case_id].plan_json)
@@ -377,7 +403,12 @@ with tab_flow:
             st.code(p.diff or "(không có diff)", language="diff")
             b1, b2 = st.columns(2)
             if b1.button("Duyệt và chạy lại", key=f"rap_{rid}", disabled=p.new_plan is None or p.outcome.value != "proposed"):
-                if not save_grounded_plan(p.test_case_id, p.new_plan):
+                try:
+                    grounded = save_grounded_plan(p.test_case_id, p.new_plan)
+                except BrowserTaskError as exc:
+                    show_browser_task_error(exc, p.test_case_id)
+                    st.stop()
+                if not grounded:
                     st.error("Không áp dụng repair: grounding có locator không khớp đúng một phần tử.")
                     st.stop()
                 decide(gate, "repair", f"repair-{rid}", True)

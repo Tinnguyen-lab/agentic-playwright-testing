@@ -5,6 +5,8 @@ Grounding tách thành hàm thuần `ground_actions(actions, count_fn)` để te
 """
 from __future__ import annotations
 
+from urllib.parse import urljoin, urlparse
+
 from src.models.playwright_artifacts import (
     ActionType,
     GeneratedScript,
@@ -56,6 +58,24 @@ _LOCATOR_ACTIONS = {
     ActionType.EXPECT_TEXT, ActionType.EXPECT_VALUE, ActionType.EXPECT_CHECKED,
     ActionType.EXPECT_ENABLED, ActionType.EXPECT_COUNT,
 }
+
+
+def normalize_navigation_urls(plan: PlaywrightPlan, target_url: str) -> PlaywrightPlan:
+    """Resolve simple relative goto/expect_url routes against the approved target URL.
+
+    Playwright's string URL assertion compares the complete URL; an LLM result
+    such as ``/products`` is otherwise guaranteed to fail after a valid login.
+    Unsupported glob expressions remain unchanged instead of weakening the oracle.
+    """
+    actions = []
+    for action in plan.actions:
+        arg = action.arg
+        if action.type in {ActionType.GOTO, ActionType.EXPECT_URL} and arg:
+            route = arg[2:] if arg.startswith("**/") and arg.count("*") == 2 else arg
+            if not urlparse(route).scheme and not route.startswith("//") and not any(c in route for c in "*[]{}"):
+                arg = urljoin(target_url, route)
+        actions.append(action.model_copy(update={"arg": arg}) if arg != action.arg else action)
+    return plan.model_copy(update={"target_url": target_url, "actions": actions})
 
 
 def _grounding_ok(action, matched: int) -> bool:
@@ -204,7 +224,7 @@ class PlaywrightGenerationAgent:
         feedback: kết quả grounding của plan trước (xem `grounding_feedback`) để LLM sinh lại."""
         user_prompt = self._build_user_prompt(test_case, target_url, page_context, feedback)
         plan = self._llm.structured_completion(SYSTEM_PROMPT, user_prompt, PlaywrightPlan)
-        return plan.model_copy(update={"test_case_id": test_case.id, "target_url": target_url})
+        return normalize_navigation_urls(plan.model_copy(update={"test_case_id": test_case.id}), target_url)
 
     def generate(self, test_case: TestCase, target_url: str, count_fn=None, screenshot: str = "screenshot.png") -> GeneratedScript:
         plan = self.plan(test_case, target_url)
