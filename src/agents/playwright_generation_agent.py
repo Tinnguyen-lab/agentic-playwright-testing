@@ -5,6 +5,8 @@ Grounding tách thành hàm thuần `ground_actions(actions, count_fn)` để te
 """
 from __future__ import annotations
 
+from urllib.parse import urljoin, urlparse
+
 from src.models.playwright_artifacts import (
     ActionType,
     GeneratedScript,
@@ -39,6 +41,51 @@ QUY TẮC:
 Trả JSON PlaywrightPlan: { "actions": [ ... ] }.\
 """
 
+SYSTEM_PROMPT += """
+- DSL actions: goto, fill, click, select_option, check, uncheck, press, hover, dblclick,
+  upload_file, drag_to, expect_url, expect_visible, expect_text, expect_value, expect_checked,
+  expect_enabled, expect_count. Never emit free-form JavaScript or Playwright code.
+- select_option/press/upload_file use arg as value/key/path; expect_count uses an integer arg.
+- drag_to requires both the source locator and target_strategy, target_value, target_role_name, target_nth.
+- upload_file may only reference approved test data inside the project workspace.
+"""
+
+
+_LOCATOR_ACTIONS = {
+    ActionType.FILL, ActionType.CLICK, ActionType.SELECT_OPTION, ActionType.CHECK,
+    ActionType.UNCHECK, ActionType.PRESS, ActionType.HOVER, ActionType.DBLCLICK,
+    ActionType.UPLOAD_FILE, ActionType.DRAG_TO, ActionType.EXPECT_VISIBLE,
+    ActionType.EXPECT_TEXT, ActionType.EXPECT_VALUE, ActionType.EXPECT_CHECKED,
+    ActionType.EXPECT_ENABLED, ActionType.EXPECT_COUNT,
+}
+
+
+def normalize_navigation_urls(plan: PlaywrightPlan, target_url: str) -> PlaywrightPlan:
+    """Resolve simple relative goto/expect_url routes against the approved target URL.
+
+    Playwright's string URL assertion compares the complete URL; an LLM result
+    such as ``/products`` is otherwise guaranteed to fail after a valid login.
+    Unsupported glob expressions remain unchanged instead of weakening the oracle.
+    """
+    actions = []
+    for action in plan.actions:
+        arg = action.arg
+        if action.type in {ActionType.GOTO, ActionType.EXPECT_URL} and arg:
+            route = arg[2:] if arg.startswith("**/") and arg.count("*") == 2 else arg
+            if not urlparse(route).scheme and not route.startswith("//") and not any(c in route for c in "*[]{}"):
+                arg = urljoin(target_url, route)
+        actions.append(action.model_copy(update={"arg": arg}) if arg != action.arg else action)
+    return plan.model_copy(update={"target_url": target_url, "actions": actions})
+
+
+def _grounding_ok(action, matched: int) -> bool:
+    if action.type == ActionType.EXPECT_COUNT:
+        try:
+            return matched == int(action.arg)
+        except (TypeError, ValueError):
+            return False
+    return matched == 1
+
 
 def ground_actions(actions, count_fn) -> list[GroundingRecord]:
     """Đếm số element khớp cho mỗi action có locator. count_fn(strategy, value, role_name)->int."""
@@ -52,8 +99,15 @@ def ground_actions(actions, count_fn) -> list[GroundingRecord]:
             strategy=action.strategy.value,
             value=action.value or action.role_name,
             matched_count=matched,
-            ok=(matched == 1),
+            ok=_grounding_ok(action, matched),
         ))
+        if action.type == ActionType.DRAG_TO and action.target_strategy is not None:
+            target_matched = count_fn(action.target_strategy, action.target_value, action.target_role_name)
+            records.append(GroundingRecord(
+                action_index=index, strategy=action.target_strategy.value,
+                value=action.target_value or action.target_role_name, matched_count=target_matched,
+                ok=(target_matched == 1), locator_part="target",
+            ))
     return records
 
 
@@ -84,7 +138,7 @@ def live_count_fn(page):
     return count
 
 
-def _advance(page, action, locator, matched):
+def _advance(page, action, locator, matched, target_locator=None, target_matched=None):
     """Thực thi action để đẩy trạng thái trang sang bước kế (goto/fill/click). Assertion không đổi state."""
     if action.type == ActionType.GOTO and action.arg:
         page.goto(action.arg)
@@ -94,11 +148,27 @@ def _advance(page, action, locator, matched):
                 locator.first.fill(action.arg)
             elif action.type == ActionType.CLICK:
                 locator.first.click()
+            elif action.type == ActionType.SELECT_OPTION:
+                locator.first.select_option(action.arg)
+            elif action.type == ActionType.CHECK:
+                locator.first.check()
+            elif action.type == ActionType.UNCHECK:
+                locator.first.uncheck()
+            elif action.type == ActionType.PRESS:
+                locator.first.press(action.arg)
+            elif action.type == ActionType.HOVER:
+                locator.first.hover()
+            elif action.type == ActionType.DBLCLICK:
+                locator.first.dblclick()
+            elif action.type == ActionType.UPLOAD_FILE:
+                locator.first.set_input_files(action.arg)
+            elif action.type == ActionType.DRAG_TO and target_matched == 1:
+                locator.first.drag_to(target_locator.first)
         except Exception:
             pass
 
 
-def ground_flow(page, actions, wait_ms: int = 3000, snapshot_chars: int = 0) -> list[GroundingRecord]:
+def ground_flow(page, actions, wait_ms: int = 10_000, snapshot_chars: int = 0) -> list[GroundingRecord]:
     """Multi-step grounding: đi theo luồng, ground mỗi locator trên DOM TẠI BƯỚC ĐÓ rồi mới đẩy trạng thái.
 
     Khác `ground_actions` (đếm trên một ảnh chụp tĩnh): phần tử xuất hiện sau điều hướng được ground đúng.
@@ -108,6 +178,8 @@ def ground_flow(page, actions, wait_ms: int = 3000, snapshot_chars: int = 0) -> 
     for index, action in enumerate(actions):
         locator = None
         matched = None
+        target_locator = None
+        target_matched = None
         if action.strategy is not None:
             locator = build_locator(page, action.strategy, action.value, action.role_name, action.nth)
             try:
@@ -120,10 +192,24 @@ def ground_flow(page, actions, wait_ms: int = 3000, snapshot_chars: int = 0) -> 
                 strategy=action.strategy.value,
                 value=action.value or action.role_name,
                 matched_count=matched,
-                ok=(matched == 1),
+                ok=_grounding_ok(action, matched),
                 snapshot=page.locator("body").aria_snapshot()[:snapshot_chars] if snapshot_chars and matched != 1 else "",
             ))
-        _advance(page, action, locator, matched)
+        if action.type == ActionType.DRAG_TO and action.target_strategy is not None:
+            target_locator = build_locator(page, action.target_strategy, action.target_value,
+                                           action.target_role_name, action.target_nth)
+            try:
+                target_locator.first.wait_for(state="attached", timeout=wait_ms)
+            except Exception:
+                pass
+            target_matched = target_locator.count()
+            records.append(GroundingRecord(
+                action_index=index, strategy=action.target_strategy.value,
+                value=action.target_value or action.target_role_name, matched_count=target_matched,
+                ok=(target_matched == 1), locator_part="target",
+                snapshot=page.locator("body").aria_snapshot()[:snapshot_chars] if snapshot_chars and target_matched != 1 else "",
+            ))
+        _advance(page, action, locator, matched, target_locator, target_matched)
     return records
 
 
@@ -138,7 +224,7 @@ class PlaywrightGenerationAgent:
         feedback: kết quả grounding của plan trước (xem `grounding_feedback`) để LLM sinh lại."""
         user_prompt = self._build_user_prompt(test_case, target_url, page_context, feedback)
         plan = self._llm.structured_completion(SYSTEM_PROMPT, user_prompt, PlaywrightPlan)
-        return plan.model_copy(update={"test_case_id": test_case.id, "target_url": target_url})
+        return normalize_navigation_urls(plan.model_copy(update={"test_case_id": test_case.id}), target_url)
 
     def generate(self, test_case: TestCase, target_url: str, count_fn=None, screenshot: str = "screenshot.png") -> GeneratedScript:
         plan = self.plan(test_case, target_url)

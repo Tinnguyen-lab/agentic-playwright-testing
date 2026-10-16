@@ -178,8 +178,10 @@ def main(argv=None) -> int:
               f"| unsupported {s['unsupported_rate']:.0%} | truy vết {s['traceable']}/{s['n_tc']} | boundary {s['boundary_tc']}"
               + (f" | có AG-01: {s['gated']['n_tc']} TC, phủ {s['gated']['coverage']:.0%}, "
                  f"unsupported {s['gated']['unsupported_rate']:.0%}" if "gated" in s else ""))
-    Path(args.out).write_text(json.dumps({"model": model, "summary": summary, "rows": rows}, ensure_ascii=False, indent=2),
-                              encoding="utf-8")
+    output_path = Path(args.out)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps({"model": model, "summary": summary, "rows": rows}, ensure_ascii=False, indent=2),
+                           encoding="utf-8")
 
     # mẫu 20% cho người chấm lại
     rng = random.Random(42)

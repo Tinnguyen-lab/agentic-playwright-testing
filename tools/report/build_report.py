@@ -175,7 +175,7 @@ def chapter1(r: Report):
          "Đã đo: 62 target (12 độc lập), 10 site, 3 model"],
         ["RQ3", "Sửa lỗi có ràng buộc và phê duyệt của con người có tăng tỉ lệ sửa thành công mà không đổi ý nghĩa test case "
          "không?", "Đã đo: ShopLab, 22 mutation (8 độc lập), 2 model"],
-        ["RQ4", "Hệ thống giảm bao nhiêu thời gian và thao tác thủ công so với quy trình truyền thống?",
+        ["RQ4", "Cổng xác nhận human-in-the-loop có ngăn script chạy được nhưng sai ngữ nghĩa không?",
          RQ4_STATUS],
     ], [1.3, 10.7, 4], center_cols=(0,))
 
@@ -226,7 +226,7 @@ def chapter1(r: Report):
         ["Giao diện", "Streamlit", "Quy trình duyệt AG-01..05, sinh và chạy script, lịch sử"],
         ["Lưu trữ", "SQLAlchemy 2; SQLite / SQL Server Express", "Version, quyết định, truy vết, nhật ký thao tác"],
         ["Ứng dụng đích", "Flask (ShopLab)", "App có mutation kiểm soát được cho RQ3, RQ4"],
-        ["Kiểm thử", "pytest, pytest-playwright", "Unit test offline; chạy test của người tham gia RQ4"],
+        ["Kiểm thử", "pytest, pytest-playwright", "Unit test offline; mutation-check trước/sau cổng review RQ4"],
     ], [3.6, 6, 6.4])
 
 
@@ -818,7 +818,7 @@ def references_and_appendix(r: Report, cat):
         ["RQ2/RQ3 model khác", "thêm --profile claude (.env.claude) hoặc bỏ --profile (Gemma qua LM Studio, .env)"],
         ["RQ3 mutation độc lập", "python run_rq3.py --profile cloud --variants T9_cart_link,...,S10_save_fails "
          "--out rq3_results_heldout_deepseek.json"],
-        ["RQ4", "python tools/rq4/rq4.py timer | export | check | analyze (xem rq4-protocol.md)"],
+        ["RQ4", "python tools/rq4/simulate.py (kiểm chứng RQ4-S; xem rq4-protocol.md)"],
     ], [4.5, 11.5])
 
 

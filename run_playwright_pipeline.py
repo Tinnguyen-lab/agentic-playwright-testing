@@ -15,9 +15,12 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 from src.agents.execution_agent import ExecutionAgent
-from src.agents.playwright_generation_agent import PlaywrightGenerationAgent, live_count_fn
-from src.models.playwright_artifacts import ActionType, LocatorStrategy, PlaywrightAction, PlaywrightPlan
+from src.agents.playwright_generation_agent import (
+    PlaywrightGenerationAgent, ground_flow, grounding_feedback,
+)
+from src.models.playwright_artifacts import ActionType, GeneratedScript, LocatorStrategy, PlaywrightAction, PlaywrightPlan
 from src.models.test_case import TestCase, TestStep, TestType
+from src.services.script_template import render_script
 from src.utils.cli import resolve_client
 
 DEFAULT_URL = "https://www.saucedemo.com/"
@@ -71,14 +74,27 @@ def main(argv: list[str] | None = None) -> int:
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
-        counter = live_count_fn(page)
         for tc in test_cases:
             page.goto(args.url)
-            script = agent.generate(tc, args.url, count_fn=counter, screenshot=f"{tc.id}.png")
+            page_context = page.locator("body").aria_snapshot()
+            plan = agent.plan(tc, args.url, page_context=page_context)
+            grounding = ground_flow(page, plan.actions, snapshot_chars=3000)
+            feedback = grounding_feedback(plan, grounding)
+            replanned = feedback is not None
+            if feedback:
+                page.goto(args.url)
+                plan = agent.plan(tc, args.url, page_context=page_context, feedback=feedback)
+                grounding = ground_flow(page, plan.actions, snapshot_chars=3000)
+            script = GeneratedScript(
+                test_case_id=tc.id,
+                code=render_script(plan, screenshot=f"{tc.id}.png"),
+                grounding=grounding,
+            )
             result = executor.run(script, WORKDIR)
 
             grounded_ok = sum(1 for g in script.grounding if g.ok)
             print(f"\n[{tc.id}] {tc.title}")
+            print(f"  grounding retry: {'yes' if replanned else 'no'}")
             print(f"  grounding: {grounded_ok}/{len(script.grounding)} locator khớp-đúng-1")
             for g in script.grounding:
                 flag = "✓" if g.ok else "⚠"
@@ -89,12 +105,15 @@ def main(argv: list[str] | None = None) -> int:
 
             out_results.append({
                 "test_case_id": tc.id,
+                "grounding_retry_used": replanned,
                 "grounding": [g.model_dump(mode="json") for g in script.grounding],
                 "execution": result.model_dump(mode="json"),
             })
         browser.close()
 
-    Path(args.out).write_text(json.dumps(out_results, ensure_ascii=False, indent=2), encoding="utf-8")
+    output_path = Path(args.out)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(out_results, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n[✓] Đã ghi: {args.out}")
     return 0
 

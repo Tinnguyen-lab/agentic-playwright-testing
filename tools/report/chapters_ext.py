@@ -132,18 +132,16 @@ def rq3_method(r, broken_counts: dict | None):
 
 
 def rq4_method(r):
-    r.h2("4.6 Đánh giá RQ4: thí nghiệm có người tham gia")
-    r.p("RQ4 cần đo công sức của người dùng, nên không mô phỏng được. Giao thức đầy đủ ở docs/development/rq4-protocol.md. "
-        "Thiết kế trong-đối-tượng: mỗi người tham gia làm hai phiên 30 phút, một phiên tự viết test Playwright (được dùng "
-        "codegen, không dùng trợ lý AI), một phiên dùng giao diện của hệ thống, trên hai bộ nhiệm vụ tương đương A và B "
-        "(mỗi bộ 3 yêu cầu trên ShopLab). Thứ tự điều kiện và bộ nhiệm vụ được đảo cân bằng giữa người tham gia.")
+    r.h2("4.6 Đánh giá RQ4: cổng xác nhận human-in-the-loop")
+    r.p("RQ4 không so sánh AI với kiểm thử viên. Hệ thống hỗ trợ chuẩn hoá yêu cầu, sinh test case và Playwright; con người "
+        "giữ quyền xác nhận requirement, expected result/test oracle, script đã grounding và repair. Giao thức đầy đủ ở docs/development/rq4-protocol.md.")
     r.table("Số đo RQ4", ["Số đo", "Cách lấy"], [
-        ["Thời gian hoàn thành", "Bấm giờ bằng tools/rq4/rq4.py timer"],
-        ["Số yêu cầu có test hợp lệ (0–3)",
-         "Tự chấm: test phải pass trên ShopLab v0 và fail trên mutation semantic phá đúng hành vi của yêu cầu đó"],
-        ["Số lần sửa tay (điều kiện hệ thống)", "Sự kiện edit_test_case, edit_plan trong bảng ui_event"],
-        ["Mức dễ dùng", "Phiếu SUS 10 câu (0–100)"],
+        ["Test chạy được", "Pass trên ShopLab v0"],
+        ["Độ chính xác oracle và độ bao phủ hành vi",
+         "Test phải pass trên v0 và fail trên mutation semantic phá đúng hành vi yêu cầu"],
+        ["Can thiệp review", "Sự kiện edit_test_case, edit_plan và approval log"],
+        ["Truy vết", "Requirement → test case → script → execution → approval"],
     ], [5, 11])
-    r.p("Tiêu chí test hợp lệ bắt được test chạy được nhưng không kiểm gì. Khi chạy thử bộ chấm, một test thêm sản phẩm "
-        "vào giỏ mà không kiểm số trên giỏ được chấm không hợp lệ, vì nó vẫn pass trên mutation làm nút Add to cart vô "
-        "hiệu. Hai điều kiện được chấm bằng cùng một bộ chấm.")
+    r.p("Tiêu chí semantic bắt được script chạy xanh nhưng không kiểm expected result. RQ4-S chạy sáu fixture trên ShopLab "
+        "và mutation: nhánh bỏ review hợp lệ 4/6, nhánh bổ sung hai assertion oracle hợp lệ 6/6. Đây là kiểm chứng cơ chế, "
+        "không phải dữ liệu người dùng hay kết luận hệ thống nhanh hơn con người.")

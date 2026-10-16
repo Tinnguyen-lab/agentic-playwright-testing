@@ -9,18 +9,23 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-from src.agents.playwright_generation_agent import build_locator, ground_flow, live_count_fn
+from src.agents.playwright_generation_agent import _grounding_ok, build_locator, ground_flow, live_count_fn
 from src.models.playwright_artifacts import ActionType, PlaywrightAction, PlaywrightPlan
 from src.services.locator_healing import heal_action, propose_candidates
 
 SNAPSHOT_CHARS = 4000
 LAUNCH_ARGS = ["--disable-http2"]  # giống script_template
+
+
+class BrowserTaskError(RuntimeError):
+    """Tác vụ trình duyệt thất bại; UI có thể hiển thị thông báo ngắn gọn."""
 
 
 def snapshot(page, chars: int = SNAPSHOT_CHARS) -> str:
@@ -30,12 +35,13 @@ def snapshot(page, chars: int = SNAPSHOT_CHARS) -> str:
         return ""
 
 
-def probe(browser, plan: PlaywrightPlan):
+def probe(browser, plan: PlaywrightPlan, storage_state: str | None = None):
     """Chạy lại plan trên trang thật tới bước hỏng đầu tiên. Trả (page, chỉ số|None, ghi chú, snapshot).
 
     Page được để mở (ở đúng trạng thái lúc hỏng) để self-healing dò DOM; người gọi đóng `page.context`.
     """
-    page = browser.new_context().new_page()
+    context = browser.new_context(storage_state=storage_state) if storage_state else browser.new_context()
+    page = context.new_page()
     idx, note = None, "replay không gặp lỗi"
     for i, a in enumerate(plan.actions):
         try:
@@ -52,14 +58,48 @@ def probe(browser, plan: PlaywrightPlan):
             with contextlib.suppress(Exception):
                 loc.first.wait_for(state="attached", timeout=2000)
             n = loc.count()
-            if n != 1:
+            if not _grounding_ok(a, n):
                 idx, note = i, f"locator {a.strategy.value}:{a.value}[{a.role_name}] khớp {n} phần tử"
                 break
+            target = None
+            if a.type == ActionType.DRAG_TO:
+                if a.target_strategy is None:
+                    idx, note = i, "drag_to missing target locator"
+                    break
+                target = build_locator(page, a.target_strategy, a.target_value, a.target_role_name, a.target_nth)
+                if target.count() != 1:
+                    idx, note = i, f"drag target matched {target.count()} elements"
+                    break
             if a.type == ActionType.FILL:
                 loc.fill(a.arg)
             elif a.type == ActionType.CLICK:
                 loc.click()
                 page.wait_for_load_state()
+            elif a.type == ActionType.SELECT_OPTION:
+                loc.select_option(a.arg)
+            elif a.type == ActionType.CHECK:
+                loc.check()
+            elif a.type == ActionType.UNCHECK:
+                loc.uncheck()
+            elif a.type == ActionType.PRESS:
+                loc.press(a.arg)
+            elif a.type == ActionType.HOVER:
+                loc.hover()
+            elif a.type == ActionType.DBLCLICK:
+                loc.dblclick()
+            elif a.type == ActionType.UPLOAD_FILE:
+                loc.set_input_files(a.arg)
+            elif a.type == ActionType.DRAG_TO:
+                loc.drag_to(target)
+            elif a.type == ActionType.EXPECT_VALUE and loc.input_value() != a.arg:
+                idx, note = i, f"value actual: {loc.input_value()!r}"
+                break
+            elif a.type == ActionType.EXPECT_CHECKED and not loc.is_checked():
+                idx, note = i, "checkbox/radio is not checked"
+                break
+            elif a.type == ActionType.EXPECT_ENABLED and not loc.is_enabled():
+                idx, note = i, "element is disabled"
+                break
             elif a.type == ActionType.EXPECT_TEXT and a.arg not in loc.inner_text():
                 idx, note = i, f"văn bản thực tế: {loc.inner_text()!r}"
                 break
@@ -80,7 +120,8 @@ def try_heal(page, plan: PlaywrightPlan, idx) -> dict[int, PlaywrightAction] | N
     return {idx: healed} if healed is not None else None
 
 
-def heal_all(browser, plan: PlaywrightPlan, max_rounds: int = 6):
+def heal_all(browser, plan: PlaywrightPlan, max_rounds: int = 6,
+             storage_state: str | None = None):
     """Chữa theo lô: dò bước hỏng → chữa → dò lại trên plan đã chữa, tới khi hết lỗi chữa được.
 
     Trả (các action đã chữa theo chỉ số, ghi chú + snapshot tại bước hỏng cuối cùng). Một mutation đổi nhiều locator
@@ -90,7 +131,7 @@ def heal_all(browser, plan: PlaywrightPlan, max_rounds: int = 6):
     current = plan
     note, snap = "", ""
     for _ in range(max_rounds):
-        page, idx, note, snap = probe(browser, current)
+        page, idx, note, snap = probe(browser, current, storage_state=storage_state)
         fix = try_heal(page, current, idx)
         page.context.close()
         if not fix:
@@ -105,19 +146,20 @@ def _task(name: str, payload: dict) -> dict:
     with sync_playwright() as p:
         browser = p.chromium.launch(args=LAUNCH_ARGS)
         try:
+            state = payload.get("storage_state")
             if name == "snapshot":
-                page = browser.new_page()
+                page = browser.new_page(storage_state=state) if state else browser.new_page()
+                page.goto(payload["url"], wait_until="domcontentloaded", timeout=30000)
                 with contextlib.suppress(Exception):
-                    page.goto(payload["url"], timeout=30000)
                     page.wait_for_load_state("networkidle", timeout=8000)
                 return {"snapshot": snapshot(page, payload.get("chars", 6000))}
             plan = PlaywrightPlan.model_validate(payload["plan"])
             if name == "ground":
-                page = browser.new_page()
+                page = browser.new_page(storage_state=state) if state else browser.new_page()
                 records = ground_flow(page, plan.actions, snapshot_chars=payload.get("chars", SNAPSHOT_CHARS))
                 return {"records": [r.model_dump() for r in records]}
             if name == "probe_heal":
-                healed, evidence = heal_all(browser, plan)
+                healed, evidence = heal_all(browser, plan, storage_state=state)
                 return {"evidence": evidence, "healed": {str(k): v.model_dump(mode="json") for k, v in healed.items()}}
             raise ValueError(f"task không hỗ trợ: {name}")
         finally:
@@ -125,13 +167,33 @@ def _task(name: str, payload: dict) -> dict:
 
 
 def run_task(name: str, payload: dict, timeout: int = 180) -> dict:
-    """Gọi tác vụ trong tiến trình con; lỗi trả {"error": ...} thay vì ném (UI hiển thị được)."""
-    proc = subprocess.run([sys.executable, "-m", "src.services.browser_tasks", name], input=json.dumps(payload),
-                          capture_output=True, text=True, encoding="utf-8", timeout=timeout,
-                          cwd=Path(__file__).resolve().parents[2])
+    """Chạy tác vụ ở tiến trình con; lỗi browser phải dừng luồng thay vì trả kết quả rỗng."""
+    child_env = os.environ.copy()
+    child_env["PYTHONUTF8"] = "1"
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-m", "src.services.browser_tasks", name],
+            input=json.dumps(payload), capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=timeout,
+            cwd=Path(__file__).resolve().parents[2], env=child_env,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise BrowserTaskError(f"Tác vụ {name} quá thời gian {timeout} giây") from exc
+    except OSError as exc:
+        raise BrowserTaskError(f"Không khởi chạy được tác vụ trình duyệt {name}") from exc
     if proc.returncode != 0:
-        return {"error": proc.stderr.strip().splitlines()[-1] if proc.stderr.strip() else f"exit {proc.returncode}"}
-    return json.loads(proc.stdout)
+        stderr = (proc.stderr or "").strip()
+        lines = [line.strip() for line in stderr.splitlines() if line.strip()]
+        detail = next(
+            (line for line in reversed(lines)
+             if line.startswith(("playwright._impl._errors.", "ValueError:", "RuntimeError:", "OSError:"))),
+            lines[-1] if lines else f"exit {proc.returncode}",
+        )
+        raise BrowserTaskError(detail)
+    try:
+        return json.loads(proc.stdout or "")
+    except json.JSONDecodeError as exc:
+        raise BrowserTaskError(f"Tác vụ {name} không trả JSON hợp lệ") from exc
 
 
 if __name__ == "__main__":

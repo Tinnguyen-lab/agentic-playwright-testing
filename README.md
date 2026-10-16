@@ -32,6 +32,18 @@ Hai file này không được commit. DB mặc định là SQLite `artifacts/app
 | App đích ShopLab | `python apps/shoplab/app.py --variant v0 --port 5100` |
 | Pipeline demo trên SauceDemo | `python run_full_pipeline.py` |
 
+Ở bước **③ Sinh script và chạy**, nút **Chạy** mở cửa sổ Chromium trên máy chạy Streamlit; cửa sổ tự đóng khi test kết thúc. Script đã lưu từ phiên bản cũ cũng được chạy ở chế độ hiển thị.
+Nếu giữ URL mặc định `http://127.0.0.1:5100/login`, hãy chạy ShopLab trước khi bấm **Sinh script**.
+
+### Dùng lại phiên đăng nhập trong UI
+
+1. Giữ cùng tên **Dự án** và hostname website. Với URL trang login, duyệt test case đăng nhập thành công, sinh và duyệt script có assertion xác nhận trang sau đăng nhập.
+2. Ở bước ③, bấm **Chạy & lưu phiên** trên test case positive đó. Nút này chạy từ browser sạch và chỉ lưu cookie/localStorage khi script đạt. Script lưu từ phiên bản cũ cần được sinh lại và duyệt lại trước khi dùng nút này.
+3. Đổi **URL ứng dụng đích** sang trang được bảo vệ, ví dụ trang My Info của OrangeHRM. Bật **Dùng phiên đã lưu cho trang được bảo vệ** trong sidebar, rồi sinh/ground/chạy các case của trang đó. Mỗi lần vẫn dùng browser context mới nhưng nạp cùng trạng thái đăng nhập.
+4. Tắt tùy chọn này khi kiểm thử login, logout hoặc truy cập khi chưa xác thực. Nếu session hết hạn, chạy lại bước 2; có thể bấm **Xóa phiên đã lưu** để thu hồi bản cục bộ.
+
+Trạng thái đăng nhập được lưu theo dự án và origin trong `artifacts/auth_states/` (đã bị Git bỏ qua), không đưa vào prompt hay SQLite. Không dùng chung một state cho nhiều tài khoản/vai trò; phiên bản này chỉ có một state cho mỗi dự án + origin. Một số ứng dụng dùng `sessionStorage` hoặc cơ chế xác thực khác có thể cần đăng nhập lại vì Playwright `storage_state` chỉ tái sử dụng cookies và localStorage.
+
 ## Tái lập thực nghiệm
 
 | RQ | Lệnh | Kết quả |

@@ -1,102 +1,57 @@
-# Giao thức thí nghiệm RQ4 — công sức thủ công: tự viết test so với dùng hệ thống
+# RQ4 — Manual versus AI-assisted human-in-the-loop testing
 
-**RQ4:** Hệ thống giảm được bao nhiêu thời gian và thao tác chỉnh sửa thủ công so với quy trình viết test case và mã
-Playwright truyền thống?
+**RQ4:** Does AI-assisted, human-in-the-loop test design reduce the effort to create test cases and Playwright scripts while maintaining semantic test quality?
 
-Tài liệu này dành cho người điều phối buổi thí nghiệm. Mọi lệnh chạy ở thư mục gốc dự án.
+The comparison is not *tester versus autonomous AI*. In both conditions a person owns the test oracle and the final submitted scripts. The AI-assisted condition gives that person requirement analysis, test-case proposals, Playwright generation, locator grounding and approval gates.
 
-## 1. Thiết kế
+## Conditions
 
-- **Trong-đối-tượng (within-subject):** mỗi người tham gia làm cả hai điều kiện, mỗi điều kiện một bộ nhiệm vụ khác nhau.
-- **Hai điều kiện:**
-  - `manual`: tự viết test Playwright Python. Được dùng VS Code, `playwright codegen`, tài liệu Playwright và tìm kiếm
-    web. Không dùng trợ lý AI.
-  - `system`: dùng giao diện Streamlit của hệ thống: phân tích yêu cầu → duyệt → sinh test case → duyệt → sinh script →
-    chạy → (nếu lỗi) duyệt đề xuất sửa. Được sửa test case và plan trên giao diện.
-- **Hai bộ nhiệm vụ tương đương** trên ShopLab: [task_A.md](../../datasets/reference/rq4/task_A.md) và
-  [task_B.md](../../datasets/reference/rq4/task_B.md), mỗi bộ 3 yêu cầu (UC-1..3), độ khó tương tự.
-- **Đảo cân bằng** thứ tự điều kiện và bộ nhiệm vụ:
-
-| Người tham gia | Phiên 1 | Phiên 2 |
+| Condition | Person's work | System role |
 |---|---|---|
-| P1, P5 | manual + A | system + B |
-| P2, P6 | system + A | manual + B |
-| P3 | manual + B | system + A |
-| P4 | system + B | manual + A |
+| `manual` | Read the requirement, write test cases and Playwright scripts from scratch, validate them. | No generation assistance. |
+| `ai_assisted` | Review/edit requirements and proposed tests, approve the grounded script, correct decisions where needed. | Propose artifacts and execute grounding; never self-approves. |
 
-- **Giới hạn thời gian:** 30 phút mỗi phiên. Hết giờ thì dừng và chấm phần đã làm.
+Use a crossover allocation: half of participants complete Task A manually then Task B with assistance; the other half use the reverse order. A participant must not repeat the same task in both conditions.
 
-## 2. Người tham gia
+## Tasks and outcome
 
-4 người (tối thiểu 2, khi đó ghi là pilot): sinh viên CNTT **ngoài nhóm** đã biết Python cơ bản. Thành viên nhóm không
-tham gia vì đã biết các mutation và tiêu chí chấm; hai thành viên làm người điều phối. Có 2 máy thì chạy song song 2
-người, mỗi máy một người điều phối. Mỗi người mất khoảng 75 phút (2 phiên × 30 phút, đọc đề, phiếu SUS).
-Ghi lại mức kinh nghiệm Playwright (chưa dùng / đã dùng / thành thạo). Người tham gia đồng ý bằng lời trước khi bắt
-đầu; không thu thông tin cá nhân ngoài mã P1..P6.
+Tasks A and B each contain three equivalent ShopLab use cases in `datasets/reference/rq4/`. A use case is **semantically valid** only when its submitted script passes ShopLab `v0` and fails the assigned semantic mutation.
 
-## 3. Chuẩn bị máy (một lần)
+Record for every real session:
 
+- elapsed time (`timer start` to `timer stop`);
+- number of created test cases and scripts;
+- first-run runnable use cases;
+- semantically valid use cases;
+- review edits, approvals and rejections from SQLite.
+
+Do not invent participants, timing, SUS scores, or manual artifacts. Empty cells mean the study has not been run.
+
+## Running a real session
+
+```powershell
+# Prepare an isolated handoff folder; this does not create a result.
+python tools/rq4/rq4.py prepare --participant P01 --condition manual --task A
+
+# At the beginning/end of the participant's actual work
+python tools/rq4/rq4.py timer start --participant P01 --condition manual --task A
+python tools/rq4/rq4.py timer stop  --participant P01 --condition manual --task A
+
+# Put the participant's manually written scripts in a folder, named uc1_*.py, uc2_*.py, uc3_*.py
+python tools/rq4/rq4.py check --reviewer P01 --condition manual --phase after_review --task A --tests artifacts/rq4/P01_manual_A
+
+# The same checker is used for an AI-assisted project after the person has approved its artifacts.
+python tools/rq4/rq4.py export --project P01-assisted-B --out artifacts/rq4/P01_ai_B
+python tools/rq4/rq4.py check --reviewer P01 --condition ai_assisted --phase after_review --task B --tests artifacts/rq4/P01_ai_B
+python tools/rq4/rq4.py analyze
 ```
-pip install -r requirements.txt
-python -m playwright install chromium
-python apps/shoplab/app.py --variant v0 --port 5100      # để chạy suốt buổi, cửa sổ riêng
-streamlit run src/ui/app.py                               # cửa sổ riêng, cho điều kiện system
-```
 
-Điều kiện `system` dùng backend `cloud (.env.cloud)` trên giao diện. Ở ô "Người dùng / mã người tham gia" nhập mã
-P1..P6. Ở ô "Dự án" nhập `rq4-<mã>-<bộ>`, ví dụ `rq4-P1-B`. Ở ô "URL ứng dụng đích" nhập `http://127.0.0.1:5100/login`.
+`analyze` only pairs logged start/stop events and reports incomplete or invalid timer pairs. It leaves a metric empty when a real session has not supplied it.
 
-## 4. Quy trình một phiên
+## Existing controlled evidence
 
-1. Đưa người tham gia tài liệu nhiệm vụ (A hoặc B). Cho 2 phút đọc, chưa tính giờ.
-2. Hướng dẫn quy ước nộp bài: **mỗi yêu cầu một file**, tên bắt đầu bằng `uc1_`, `uc2_`, `uc3_`. File có hàm
-   `test_...` sẽ chạy bằng pytest (fixture `page` của pytest-playwright); file không có thì chạy bằng `python` và phải
-   thoát mã 0 khi đạt.
-3. Bấm giờ bắt đầu:
-   `python tools/rq4/rq4.py timer start --participant P1 --condition manual --task A`
-4. Người tham gia làm việc. Người điều phối không gợi ý về nội dung, chỉ trả lời câu hỏi về công cụ.
-5. Khi người tham gia báo xong (hoặc hết 30 phút), bấm giờ kết thúc:
-   `python tools/rq4/rq4.py timer stop --participant P1 --condition manual --task A`
-6. Với điều kiện `system`, xuất script hệ thống đã sinh ra từ DB:
-   `python tools/rq4/rq4.py export --project rq4-P1-B --out artifacts/rq4/P1_system`
-   Với điều kiện `manual`, chép các file `uc*.py` của người tham gia vào `artifacts/rq4/P1_manual`.
-7. Chấm tự động:
-   `python tools/rq4/rq4.py check --participant P1 --condition manual --task A --tests artifacts/rq4/P1_manual`
-   (Tắt ShopLab ở cổng 5100 trước khi chấm; lệnh check tự bật các phiên bản cần thiết trên cổng này.)
-8. Người tham gia điền phiếu SUS (mục 6) cho điều kiện vừa làm.
+The completed `RQ4-HIL-*` ShopLab runs remain quality-gate evidence: after grounding and AG-08, all six use cases passed `v0` and failed their assigned semantic mutations. They are **not** manual-versus-assisted participant results and must not be included in a productivity comparison.
 
-## 5. Số đo
+## Valid conclusion
 
-| Số đo | Cách lấy | Ghi chú |
-|---|---|---|
-| Thời gian hoàn thành (phút) | `timer start/stop` | Tối đa 30 |
-| Số yêu cầu có test **hợp lệ** (0–3) | `check` | Hợp lệ = có test PASS trên ShopLab v0 **và** FAIL trên mutation ngữ nghĩa phá đúng hành vi của yêu cầu đó (A: S4_redirect, S1_error_msg, S6_add_noop; B: S2_total, S3_validation, S5_locked). Test chạy được nhưng không kiểm gì sẽ bị loại. |
-| Số lần sửa tay (system) | bảng `ui_event` (sự kiện `edit_test_case`, `edit_plan`) | Lấy theo mã người tham gia |
-| Điểm SUS (0–100) | phiếu mục 6 → `artifacts/rq4/sus.csv` | |
-
-Tổng hợp: `python tools/rq4/rq4.py analyze` → `artifacts/rq4/rq4_results.json` (từng người + trung vị theo điều kiện).
-Với 2–4 người, báo cáo dạng mô tả (trung vị, từng cặp), không kết luận thống kê mạnh.
-
-## 6. Phiếu SUS (System Usability Scale)
-
-Thang 1 (hoàn toàn không đồng ý) đến 5 (hoàn toàn đồng ý). Người điều phối nhập vào `artifacts/rq4/sus.csv` với cột
-`participant,condition,q1,...,q10`.
-
-1. Tôi nghĩ mình sẽ muốn dùng cách làm này thường xuyên.
-2. Tôi thấy cách làm này phức tạp không cần thiết.
-3. Tôi thấy cách làm này dễ dùng.
-4. Tôi nghĩ mình cần người hỗ trợ kỹ thuật mới dùng được cách làm này.
-5. Tôi thấy các chức năng được kết hợp tốt với nhau.
-6. Tôi thấy có quá nhiều điểm không nhất quán.
-7. Tôi nghĩ hầu hết mọi người sẽ học được cách làm này rất nhanh.
-8. Tôi thấy cách làm này rất cồng kềnh.
-9. Tôi thấy tự tin khi dùng cách làm này.
-10. Tôi phải học nhiều thứ trước khi dùng được cách làm này.
-
-## 7. Mối đe dọa tính hợp lệ cần ghi trong báo cáo
-
-- Cỡ mẫu nhỏ; người tham gia là bạn cùng lớp của nhóm (có thể thiên vị điều kiện `system` để "giúp" nhóm).
-- Hiệu ứng học: phiên 2 dễ hơn vì đã quen ShopLab. Đảo cân bằng giảm nhưng không loại bỏ hoàn toàn.
-- Nhiệm vụ ngắn, ứng dụng nhỏ; kết quả không suy rộng cho bộ test lớn.
-- Bộ chấm chỉ kiểm hành vi chính của từng yêu cầu bằng một mutation; test có thể đúng ở khía cạnh khác mà không được ghi
-  nhận.
+If real sessions show lower completion time for `ai_assisted` without lower semantic validity or behavioral coverage, conclude that the system accelerates artifact creation while retaining human responsibility for validation. Do not conclude that it replaces a tester.

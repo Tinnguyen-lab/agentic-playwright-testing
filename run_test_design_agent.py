@@ -70,6 +70,8 @@ def main(argv: list[str] | None = None) -> int:
     all_links = []
     results = []
     for req in approved:
+        # Exploratory coverage is mandatory. Candidates without a
+        # requirement-backed oracle remain marked review_required for AG-02.
         res = agent.design(req)
         results.append(res)
         all_cases.extend(res.test_cases)
@@ -96,7 +98,9 @@ def main(argv: list[str] | None = None) -> int:
         "test_cases": [tc.model_dump(mode="json") for tc in all_cases],
         "trace_links": [link.model_dump(mode="json") for link in all_links],
     }
-    Path(args.out).write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    output_path = Path(args.out)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n[✓] Đã ghi: {args.out}")
     return 0
 

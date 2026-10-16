@@ -20,6 +20,22 @@ def test_plan_sets_ids():
     assert plan.actions[0].type == ActionType.GOTO
 
 
+def test_plan_resolves_relative_urls_before_grounding_and_rendering():
+    proposed = PlaywrightPlan(actions=[
+        PlaywrightAction(type=ActionType.GOTO, arg="/login"),
+        PlaywrightAction(type=ActionType.EXPECT_URL, arg="/products"),
+        PlaywrightAction(type=ActionType.EXPECT_URL, arg="**/products"),
+    ])
+    agent = PlaywrightGenerationAgent(MockLLMClient(proposed), model_name="mock")
+    plan = agent.plan(TestCase(id="TC", title="login", type=TestType.POSITIVE),
+                      "http://127.0.0.1:5100/login")
+    assert [action.arg for action in plan.actions] == [
+        "http://127.0.0.1:5100/login",
+        "http://127.0.0.1:5100/products",
+        "http://127.0.0.1:5100/products",
+    ]
+
+
 def test_ground_actions_with_fake_counter():
     actions = [
         PlaywrightAction(type=ActionType.GOTO, arg="u"),

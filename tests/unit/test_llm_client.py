@@ -6,7 +6,7 @@ nên _extract_json phải bóc được khối JSON trước khi validate.
 import types
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from src.services.llm_client import (
     MockLLMClient,
@@ -104,3 +104,38 @@ def test_anthropic_uses_strict_closed_schema_without_temperature():
     assert sent["response_format"]["json_schema"]["schema"]["additionalProperties"] is False
     OpenAILLMClient("m", "k", client=client).structured_completion("sys", "usr", _Toy)
     assert client.chat.completions.last["temperature"] == 0  # provider khác giữ nguyên
+
+
+def test_invalid_schema_response_gets_one_bounded_correction():
+    class SequenceCompletions:
+        def __init__(self):
+            self.calls = []
+
+        def create(self, *, response_format, messages, **_kw):
+            self.calls.append((response_format["type"], messages[1]["content"]))
+            content = '{"a": "not an integer", "b": "ok"}' if len(self.calls) == 1 else '{"a": 7, "b": "ok"}'
+            return types.SimpleNamespace(choices=[types.SimpleNamespace(message=types.SimpleNamespace(content=content))])
+
+    completions = SequenceCompletions()
+    client = types.SimpleNamespace(chat=types.SimpleNamespace(completions=completions))
+    result = OpenAILLMClient("m", "k", client=client).structured_completion("sys", "usr", _Toy)
+    assert result == _Toy(a=7, b="ok")
+    assert [kind for kind, _ in completions.calls] == ["json_schema", "json_object"]
+    assert "Validation errors:" in completions.calls[1][1]
+
+
+def test_invalid_correction_fails_closed_after_one_retry():
+    class BadCompletions:
+        def __init__(self):
+            self.calls = 0
+
+        def create(self, **_kw):
+            self.calls += 1
+            return types.SimpleNamespace(choices=[types.SimpleNamespace(
+                message=types.SimpleNamespace(content='{"a": "bad", "b": "ok"}'))])
+
+    completions = BadCompletions()
+    client = types.SimpleNamespace(chat=types.SimpleNamespace(completions=completions))
+    with pytest.raises(ValidationError):
+        OpenAILLMClient("m", "k", client=client).structured_completion("sys", "usr", _Toy)
+    assert completions.calls == 2

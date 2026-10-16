@@ -13,6 +13,7 @@ def test_parse_bounds_patterns():
     assert parse_bounds("tối thiểu 8 ký tự")[0]["kind"] == "min"
     assert parse_bounds("không quá 100")[0] == {
         "kind": "max", "lo": None, "hi": 100, "unit": "", "excerpt": "không quá 100"}
+    assert parse_bounds("Từ 1 đến 2.000 ký tự")[0]["hi"] == 2000
 
 
 def test_parse_bounds_no_number_returns_empty():
@@ -38,14 +39,19 @@ def test_no_constraints_derives_nothing():
     assert derive_boundary_cases(StructuredRequirement(id="R", title="x", action="a")) == []
 
 
+def test_display_limit_is_not_treated_as_a_rejected_input_value():
+    req = StructuredRequirement(id="R", title="Tìm kiếm", action="tìm kiếm", constraints=["Tối đa 10 kết quả mỗi trang"])
+    assert derive_boundary_cases(req) == []
+
+
 def test_design_agent_augments_with_boundary_cases():
     # mock chỉ trả 1 positive; requirement có ràng buộc số -> agent tự thêm biên/âm bản
     draft = TestCaseDraft(test_cases=[TestCase(title="Đăng ký hợp lệ", type=TestType.POSITIVE)])
     req = StructuredRequirement(id="REQ-001", title="Đăng ký", action="đăng ký tài khoản",
                                 constraints=["Mật khẩu 8-20 ký tự"])
-    result = TestDesignAgent(MockLLMClient(draft), model_name="mock").design(req)
+    result = TestDesignAgent(MockLLMClient(draft), model_name="mock").design(req, expanded=False)
 
-    assert len(result.test_cases) == 5  # 1 positive + 4 biên/âm bản
+    assert len(result.test_cases) >= 5  # 1 positive + 4 biên/âm bản + exploratory review ideas
     assert "boundary" in result.type_coverage and "negative" in result.type_coverage
     assert all(tc.id.startswith("REQ-001-TC-") for tc in result.test_cases)
     assert {link.to_id for link in result.trace_links} == {tc.id for tc in result.test_cases}

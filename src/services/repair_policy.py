@@ -8,14 +8,24 @@ from __future__ import annotations
 from src.models.playwright_artifacts import ActionType, PlaywrightPlan
 from src.models.repair import RepairOutcome, RiskLevel
 
-_EXPECT = {ActionType.EXPECT_URL, ActionType.EXPECT_VISIBLE, ActionType.EXPECT_TEXT}
-_LOCATOR_ACTIONS = {ActionType.FILL, ActionType.CLICK, ActionType.EXPECT_VISIBLE, ActionType.EXPECT_TEXT}
+_EXPECT = {
+    ActionType.EXPECT_URL, ActionType.EXPECT_VISIBLE, ActionType.EXPECT_TEXT,
+    ActionType.EXPECT_VALUE, ActionType.EXPECT_CHECKED, ActionType.EXPECT_ENABLED,
+    ActionType.EXPECT_COUNT,
+}
+_LOCATOR_ACTIONS = {
+    ActionType.FILL, ActionType.CLICK, ActionType.SELECT_OPTION, ActionType.CHECK,
+    ActionType.UNCHECK, ActionType.PRESS, ActionType.HOVER, ActionType.DBLCLICK,
+    ActionType.UPLOAD_FILE, ActionType.DRAG_TO, *(_EXPECT - {ActionType.EXPECT_URL}),
+}
+_DATA_ACTIONS = {ActionType.FILL, ActionType.SELECT_OPTION, ActionType.PRESS, ActionType.UPLOAD_FILE}
 _HIGH = {"assertion_changed", "action_type_changed", "step_removed"}
 _MEDIUM = {"test_data_changed", "navigation_changed", "step_added"}
 
 
 def _locator_tuple(action) -> tuple:
-    return (action.strategy, action.value, action.role_name, action.nth)
+    return (action.strategy, action.value, action.role_name, action.nth,
+            action.target_strategy, action.target_value, action.target_role_name, action.target_nth)
 
 
 def classify_change(old_plan: PlaywrightPlan, new_plan: PlaywrightPlan) -> tuple[RiskLevel, bool, list[str]]:
@@ -32,7 +42,7 @@ def classify_change(old_plan: PlaywrightPlan, new_plan: PlaywrightPlan) -> tuple
             continue
         if o.type in _EXPECT and (o.arg != n.arg or o.value != n.value or o.role_name != n.role_name):
             kinds.add("assertion_changed")
-        if o.type == ActionType.FILL and o.arg != n.arg:
+        if o.type in _DATA_ACTIONS and o.arg != n.arg:
             kinds.add("test_data_changed")
         if o.type == ActionType.GOTO and o.arg != n.arg:
             kinds.add("navigation_changed")

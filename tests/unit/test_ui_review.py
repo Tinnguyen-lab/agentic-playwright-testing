@@ -23,6 +23,14 @@ def test_approved_test_case_ids():
     assert approved_test_case_ids(tcs, decisions) == ["REQ-001-TC-01"]
 
 
+def test_approval_of_old_version_does_not_approve_edited_artifact():
+    reqs = [StructuredRequirement(id="REQ-001", title="a", action="x")]
+    decisions = [ApprovalDecision(artifact_id="REQ-001", artifact_version=1,
+                                  status=ApprovalStatus.APPROVED)]
+    assert approved_requirement_ids(reqs, decisions, {"REQ-001": 1}) == ["REQ-001"]
+    assert approved_requirement_ids(reqs, decisions, {"REQ-001": 2}) == []
+
+
 def _p(*acts):
     from src.models.playwright_artifacts import PlaywrightAction, PlaywrightPlan
     return PlaywrightPlan(actions=[PlaywrightAction(**a) for a in acts])

@@ -1,0 +1,39 @@
+{
+  "source": "docs/inputs/orangehrm_observed_requirements_2026-10-14.md",
+  "selection_note": "Requirement-backed composite, read-only flow for live execution. It includes authentication because the CLI does not yet persist an authenticated-session fixture across separately generated test cases.",
+  "test_cases": [
+    {
+      "id": "ORH-DIR-TC-01",
+      "requirement_id": "ORH-05",
+      "title": "Public-demo user opens Directory Job Title listbox",
+      "type": "positive",
+      "preconditions": [
+        "The public OrangeHRM demo login page is open.",
+        "The page visibly publishes demo Username Admin and Password admin123."
+      ],
+      "steps": [
+        {
+          "action": "Enter Admin in Username and admin123 in Password, then select Login.",
+          "expected": "The Dashboard opens."
+        },
+        {
+          "action": "Select the Directory link in the authenticated sidepanel.",
+          "expected": "The Directory screen opens at /web/index.php/directory/viewDirectory."
+        },
+        {
+          "action": "Activate the custom Job Title control currently displaying -- Select -- by clicking it; do not use native select_option because this page exposes a custom listbox.",
+          "expected": "A listbox is visible."
+        },
+        {
+          "action": "Observe the options in the opened listbox.",
+          "expected": "The visible listbox contains -- Select --, HR Manager, QA Engineer, and Software Engineer."
+        }
+      ],
+      "expected_result": "The Directory Job Title custom listbox is visible and contains the observed options -- Select --, HR Manager, QA Engineer, and Software Engineer.",
+      "source_excerpt": "ORH-04 and ORH-05 observed Directory screen and Job Title listbox.",
+      "scenario_id": "SC-DIRECTORY-LISTBOX",
+      "review_required": false,
+      "review_note": ""
+    }
+  ]
+}

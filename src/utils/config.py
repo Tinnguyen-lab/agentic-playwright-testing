@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -26,8 +27,15 @@ class Settings:
 
 
 def load_settings(profile: str | None = None) -> Settings:
-    """Đọc .env (hoặc .env.<profile> nếu chỉ định) rồi lấy OPENAI_* config."""
-    load_dotenv(f".env.{profile}" if profile else None)
+    """Đọc .env (hoặc .env.<profile>) làm cấu hình ưu tiên cho lần chạy này."""
+    # Người dùng chọn provider/model trong tệp cấu hình của dự án.  Nếu không
+    # override, một OPENAI_API_KEY cũ trong biến môi trường Windows sẽ âm thầm
+    # được gửi sang provider khác (ví dụ DeepSeek) và dẫn tới lỗi 401 khó hiểu.
+    requested = Path(f".env.{profile}") if profile else Path(".env")
+    # The UI exposes a "cloud" profile, but a project may intentionally use
+    # only .env.  Fall back to it explicitly; otherwise an inherited Windows
+    # OPENAI_API_KEY is retained and can be sent to the wrong provider.
+    load_dotenv(requested if requested.exists() else Path(".env"), override=True)
     return Settings(
         openai_api_key=os.getenv("OPENAI_API_KEY", "").strip(),
         openai_model=(os.getenv("OPENAI_MODEL", "").strip() or DEFAULT_MODEL),

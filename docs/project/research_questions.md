@@ -14,4 +14,4 @@ Cơ chế sửa lỗi có ràng buộc và phê duyệt bởi con người có g
 
 ## RQ4
 
-Hệ thống đề xuất giảm được bao nhiêu thời gian và số thao tác chỉnh sửa thủ công so với quy trình viết test case và mã Playwright truyền thống?
+Trong quy trình human-in-the-loop, các cổng xác nhận của con người có ngăn được các test script chạy được nhưng không kiểm chứng đúng hành vi yêu cầu hay không?

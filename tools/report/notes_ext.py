@@ -96,13 +96,13 @@ RQ3 = [
 ]
 RQ4: list[str] = []
 RQ4_PENDING = [
-    "Thí nghiệm có người tham gia chưa được tiến hành ở thời điểm viết chuyên đề. Toàn bộ công cụ đã sẵn sàng: hai bộ "
-    "nhiệm vụ tương đương, giao diện ghi nhật ký thao tác vào DB, lệnh bấm giờ, xuất script từ DB và bộ chấm tự động bằng "
-    "mutation. Bộ chấm đã được chạy thử với một bộ test viết tay: test kiểm đăng nhập được chấm hợp lệ, còn test thêm "
-    "giỏ hàng không kiểm số trên giỏ bị chấm không hợp lệ đúng như thiết kế.",
+    "RQ4 được định nghĩa lại là đánh giá cổng xác nhận human-in-the-loop, không phải so sánh AI với người viết test. "
+    "RQ4-S kiểm chứng bộ chấm bằng sáu fixture trên ShopLab và mutation semantic: sáu script đều chạy trên bản đúng, "
+    "nhưng nhánh bỏ xác nhận oracle chỉ hợp lệ 4/6; sau khi thêm hai assertion expected result, nhánh review hợp lệ 6/6. "
+    "Kết quả là mô phỏng kỹ thuật có kiểm soát, không phải dữ liệu người duyệt thật.",
 ]
 
-RQ4_STATUS = "Đã có giao thức và công cụ; chưa có dữ liệu người tham gia"
+RQ4_STATUS = "Hoàn tất ShopLab Task A và B: Task A tăng từ 2/3 lên 3/3 sau correction, cả sáu UC sau grounding và AG-08 đều hợp lệ ngữ nghĩa; không suy diễn năng suất hoặc thay thế kiểm thử viên"
 
 THREATS = [
     "Ground truth RQ1 (20/25 tài liệu và toàn bộ 158 điều kiện gold) do Claude soạn nháp; nhãn mơ hồ chỉ chèn một khuyết "
@@ -136,8 +136,8 @@ CONCLUSIONS = [
     "0/6), trong khi LLM sửa tự do che 8–12/17 và 4/6, model mạnh hơn che nhiều hơn. Tỉ lệ sửa lỗi giao diện ngang sửa "
     "tự do trên tập phát triển (24/31) nhưng giảm mạnh trên mutation độc lập (4/15), do policy xếp mọi thay đổi trong "
     "assertion vào mức High và self-healing chép cả nội dung động vào tên phần tử.",
-    "RQ4: giao thức, hai bộ nhiệm vụ và bộ chấm tự động bằng mutation đã sẵn sàng; dữ liệu người tham gia là phần việc "
-    "còn lại.",
+    "RQ4: cổng xác nhận human-in-the-loop được kiểm chứng kỹ thuật bằng mutation; phiên review người thật là hướng đánh giá "
+    "mở rộng, không phải điều kiện để hệ thống đóng vai trò công cụ hỗ trợ.",
     "Bản thân quá trình đánh giá đã tìm ra nhiều lỗi mà unit test không bắt được: prompt thiếu đặc tả trường URL của goto, "
     "Chromium treo khi tải trang qua HTTP/2, self-healing chỉ chữa một locator mỗi lượt, BVA thiếu ngữ cảnh hành động, "
     "locator nth trỏ sai phần tử, template chèn thẳng chuỗi của LLM vào mã Python (lỗi cú pháp, nguy cơ chèn mã), và DB "
@@ -149,14 +149,14 @@ LIMITS = [
     "RQ2 trên 62 target demo thuộc 10 site, phần lớn luồng ngắn; snapshot 6.000 ký tự có thể không đủ cho trang lớn.",
     "RQ3 đo trên một ứng dụng nhỏ với 22 mutation do nhóm thiết kế; người duyệt là mô phỏng.",
     "Self-healing lấy nguyên tên hiển thị của phần tử, kể cả phần nội dung động như số đếm trong \"Basket (3)\".",
-    "RQ4 chưa có dữ liệu người tham gia ở thời điểm viết chuyên đề.",
+    "RQ4-S là mô phỏng kỹ thuật; phiên review thật được audit riêng và vẫn không được dùng để suy diễn trải nghiệm hay thời gian người dùng.",
     "DSL chưa có select, hover, nhấn phím, double click.",
     "Policy xếp mọi thay đổi bên trong assertion vào mức High, kể cả khi chỉ đổi locator mà giữ giá trị kỳ vọng; cách này "
     "an toàn nhưng tạo escalate oan khi giao diện đổi class hay id của phần tử được kiểm.",
 ]
 
 FUTURE = [
-    "Tiến hành thí nghiệm RQ4 theo giao thức đã chuẩn bị, 4 sinh viên ngoài nhóm tham gia.",
+    "Nếu cần đánh giá khả dụng trong tương lai, ghi nhận các phiên review thực tế mà không đặt AI và kiểm thử viên vào hai điều kiện thay thế nhau.",
     "Cho nhiều người gán nhãn độc lập dataset RQ1, tính kappa cho giám khảo LLM.",
     "Cho phép sinh ca negative suy ra từ điều kiện trước của yêu cầu, vẫn giữ quy tắc chống bịa phản ứng của hệ thống.",
     "Kiểm hợp đồng của DSL bằng một bước tất định trước khi chạy (URL đầy đủ trong expect_url, không có dấu ngoặc trong "

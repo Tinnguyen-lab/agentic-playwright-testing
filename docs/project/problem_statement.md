@@ -26,7 +26,7 @@ Công nghệ AI tạo sinh cung cấp công cụ mạnh mẽ để tự động 
 1. **Structured requirement và ambiguity (RQ1):** chuẩn hóa tài liệu yêu cầu thành biểu diễn có cấu trúc (định danh, nguồn gốc, precondition, action, expected outcome, trạng thái duyệt) và phát hiện yêu cầu thiếu/mơ hồ/mâu thuẫn trước khi sinh test.
 2. **Requirements traceability:** duy trì liên kết có thể kiểm toán từ yêu cầu đến test scenario, test case, mã Playwright, kết quả thực thi, đề xuất sửa và quyết định phê duyệt.
 3. **DOM grounding (RQ2):** kết hợp tài liệu yêu cầu với DOM hoặc accessibility tree của website để hạn chế locator và thao tác không tồn tại, đồng thời phân biệt **locator validity** với **semantic correctness**.
-4. **Constrained repair (RQ3):** giới hạn khả năng tự sửa của agent theo mức rủi ro và yêu cầu con người phê duyệt khi thay đổi assertion, expected result, bước kiểm thử hoặc liên kết truy vết; cùng với đó là đánh giá mức giảm công sức thủ công của toàn bộ pipeline (RQ4).
+4. **Constrained repair và human-in-the-loop (RQ3–RQ4):** giới hạn khả năng tự sửa của agent theo mức rủi ro và yêu cầu con người phê duyệt khi thay đổi assertion, expected result, bước kiểm thử hoặc liên kết truy vết; RQ4 đánh giá liệu các cổng xác nhận này có ngăn script chạy xanh nhưng sai ngữ nghĩa hay không.
 
 ## 3. Giải pháp đề xuất
 

@@ -1,0 +1,17 @@
+{
+  "skill_name": "qa-prompt-guideline",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Design expanded test cases for a checkout requirement that has a happy path, a documented stock error, and an unspecified coupon behavior.",
+      "expected_output": "A prompt contract that requests distinct cases, preserves the documented oracle, and marks the coupon candidate for review.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Generate a Playwright plan for a test case when the page does not expose a selector for the required button.",
+      "expected_output": "A prompt contract that asks for DOM-grounded output or a review block instead of an invented locator.",
+      "files": []
+    }
+  ]
+}

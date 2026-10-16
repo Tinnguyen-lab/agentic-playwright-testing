@@ -154,7 +154,9 @@ def main(argv: list[str] | None = None) -> int:
     result = agent.analyze(text, source_name=source_name)
     _print_summary(result, mock=use_mock)
 
-    Path(args.out).write_text(result.model_dump_json(indent=2), encoding="utf-8")
+    output_path = Path(args.out)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
     print(f"\n[✓] Đã ghi JSON: {args.out}")
     return 0
 

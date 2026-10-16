@@ -25,6 +25,11 @@ def test_render_login_script():
     assert 'page.get_by_placeholder("Username").fill("standard_user")' in code
     assert 'page.get_by_role("button", name="Login").click()' in code
     assert 'expect(page).to_have_url("https://www.saucedemo.com/inventory.html")' in code
+    assert "p.chromium.launch(headless=False" in code
+    assert 'browser.new_context(storage_state=_auth_input, no_viewport=True)' in code
+    assert 'browser.new_context(no_viewport=True)' in code
+    assert '--start-maximized' in code and '--start-fullscreen' in code
+    assert 'context.storage_state(path=_auth_output)' in code
     assert "sync_playwright" in code and 'page.screenshot(path="shot.png")' in code
 
 
@@ -46,6 +51,6 @@ def test_llm_strings_are_escaped_not_injected():
     ])
     code = render_script(plan)
     tree = ast.parse(code)  # trước đây: SyntaxError / chèn được mã
-    assert [type(n).__name__ for n in ast.walk(tree) if isinstance(n, (ast.Import, ast.ImportFrom))] == ["ImportFrom"]
+    assert [type(n).__name__ for n in ast.walk(tree) if isinstance(n, (ast.Import, ast.ImportFrom))] == ["ImportFrom", "ImportFrom", "Import"]
     assert 'get_by_text("\\"Welcome UserName!\\"")' in code
     assert 'page.get_by_role("button").click()' in code  # role_name rỗng -> không có name=, khớp grounding
