@@ -36,11 +36,15 @@ from src.models.playwright_artifacts import (
 )
 from src.models.approval import is_approved
 from src.models.repair import RepairDraft
-from src.models.test_case import TestCase, TestCaseDraft, TestType
+from src.models.test_case import TestCase, TestCaseDraft, TestPriority, TestSeverity, TestType
 from src.repositories.store import Store
 from src.services.browser_tasks import BrowserTaskError, run_task
+from src.services.auth_state import has_state, state_path
 from src.services.document_loader import load_document
+from src.services.llm_errors import llm_failure_message
+from src.services.manual_script import is_manual_script, validate_manual_script
 from src.services.script_template import render_script
+from src.services.test_triage import evaluate_test_case, triage_sort_key
 from src.ui.review import approved_requirement_ids, approved_test_case_ids, edited_test_case, repair_gate
 from src.utils.cli import resolve_client
 
@@ -99,7 +103,7 @@ def decide(gate: str, kind: str, artifact_id: str, approved: bool, version: int 
 
 def generate(tc: TestCase) -> bool:
     """DOM-aware: aria snapshot trang đích → LLM → grounding trên trang thật → nếu locator khớp != 1 thì sinh lại 1 lần."""
-    snap = run_task("snapshot", {"url": BASE_URL}).get("snapshot", "")
+    snap = run_task("snapshot", {"url": BASE_URL, **auth_payload()}).get("snapshot", "")
     client, model = _client(_plan_mock(BASE_URL))
     agent = PlaywrightGenerationAgent(client, model_name=model)
     plan = agent.plan(tc, BASE_URL, page_context=snap or None)
@@ -117,7 +121,7 @@ def generate(tc: TestCase) -> bool:
 
 
 def _ground(plan: PlaywrightPlan) -> list[GroundingRecord]:
-    out = run_task("ground", {"plan": plan.model_dump(mode="json")})
+    out = run_task("ground", {"plan": plan.model_dump(mode="json"), **auth_payload()})
     return [GroundingRecord(**r) for r in out.get("records", [])]
 
 
@@ -140,11 +144,20 @@ def save_grounded_plan(tc_id: str, plan: PlaywrightPlan) -> bool:
     return True
 
 
-def execute(tc_id: str) -> None:
+def auth_payload() -> dict:
+    return {"storage_state": str(AUTH_FILE)} if USE_AUTH and AUTH_FILE is not None else {}
+
+
+def execute(tc_id: str, capture_auth: bool = False) -> ExecutionResult:
     row = store.latest_scripts(pid)[tc_id]
-    result = ExecutionAgent().run(GeneratedScript(test_case_id=tc_id, code=row.code), WORKDIR)
+    result = ExecutionAgent().run(
+        GeneratedScript(test_case_id=tc_id, code=row.code), WORKDIR,
+        auth_state_in=AUTH_FILE if USE_AUTH and not capture_auth else None,
+        auth_state_save=AUTH_FILE if capture_auth else None,
+    )
     store.save_execution(pid, result, row.id)
-    log("execute", tc=tc_id, status=result.status.value)
+    log("execute", tc=tc_id, status=result.status.value, auth_saved=result.auth_state_saved)
+    return result
 
 
 def propose_repair(tc: TestCase) -> None:
@@ -155,7 +168,7 @@ def propose_repair(tc: TestCase) -> None:
     result = ExecutionResult(test_case_id=tc.id, status=ExecStatus(run.status), exit_code=run.exit_code,
                              stderr=run.stderr, artifacts=json.loads(run.artifacts_json))
     attempt = 1 + sum(1 for _, p in store.repairs(pid) if p.test_case_id == tc.id)
-    probe = run_task("probe_heal", {"plan": plan.model_dump(mode="json")})
+    probe = run_task("probe_heal", {"plan": plan.model_dump(mode="json"), **auth_payload()})
     if probe.get("healed"):
         healed = {int(k): PlaywrightAction(**v) for k, v in probe["healed"].items()}
         proposal = RepairAgent(model_name="self-healing").propose_with_healing(plan, healed, result, tc, attempt)
@@ -211,6 +224,27 @@ with st.sidebar:
     run_req = st.button("① Phân tích yêu cầu", type="primary", use_container_width=True)
 
 pid = store.get_or_create_project(PROJECT, BASE_URL)
+try:
+    AUTH_FILE = state_path(pid, BASE_URL)
+except ValueError:
+    AUTH_FILE = None
+with st.sidebar:
+    st.divider()
+    st.subheader("Phiên đăng nhập dùng lại")
+    auth_available = AUTH_FILE is not None and has_state(AUTH_FILE)
+    USE_AUTH = st.checkbox(
+        "Dùng phiên đã lưu cho trang được bảo vệ",
+        disabled=not auth_available,
+        key=f"use_auth_{pid}_{AUTH_FILE.name if AUTH_FILE else 'invalid'}",
+        help="Bật cho test trên trang cần đăng nhập; tắt khi kiểm thử đăng nhập, đăng xuất hoặc truy cập không xác thực.",
+    ) and auth_available
+    st.caption("Đã có phiên cho website này." if auth_available else
+               "Chưa có phiên. Chạy thành công script đăng nhập và chọn 'Chạy & lưu phiên'.")
+    if auth_available and st.button("Xóa phiên đã lưu", key=f"clear_auth_{pid}_{AUTH_FILE.name}"):
+        AUTH_FILE.unlink(missing_ok=True)
+        st.rerun()
+    if notice := st.session_state.pop("auth_notice", None):
+        st.success(notice)
 if not st.session_state.get("started"):
     st.session_state.started = True
     log("session_start")
@@ -229,7 +263,7 @@ if run_req:
                 # the reviewer UI. The reviewer can retry after configuration is
                 # corrected; no requirement/approval is persisted on failure.
                 log("analyze_failed", error_type=type(exc).__name__)
-                st.error("Không thể gọi LLM. Kiểm tra API key, base URL và quota rồi thử lại.")
+                st.error(llm_failure_message(exc))
             else:
                 store.save_requirements(pid, result.requirements, source_name="ui")
                 st.session_state.global_amb = [a.description for a in result.global_ambiguities]
@@ -274,20 +308,30 @@ with tab_flow:
         st.stop()
     if st.button("Thiết kế test cho các yêu cầu đã duyệt"):
         with st.spinner("Đang thiết kế test..."):
-            client, model = _client(_design_mock())
-            agent = TestDesignAgent(client, model_name=model)
-            for req in reqs:
-                if req.id in approved_reqs:
-                    store.save_test_cases(pid, agent.design(req).test_cases)
-        log("design", reqs=approved_reqs)
-        st.rerun()
-    tcs = [tc for tc in store.latest_test_cases(pid) if tc.requirement_id in approved_reqs]
+            try:
+                client, model = _client(_design_mock())
+                agent = TestDesignAgent(client, model_name=model)
+                designed = [agent.design(req) for req in reqs if req.id in approved_reqs]
+            except Exception as exc:
+                log("design_failed", error_type=type(exc).__name__)
+                st.error(llm_failure_message(exc))
+            else:
+                for result in designed:
+                    store.save_test_cases(pid, result.test_cases)
+                log("design", reqs=approved_reqs)
+                st.rerun()
+    tcs = sorted(
+        (evaluate_test_case(tc) for tc in store.latest_test_cases(pid) if tc.requirement_id in approved_reqs),
+        key=triage_sort_key,
+    )
     d2 = store.decisions(pid, "AG-02")
     tv = store.versions(pid, "test_case")
     for tc in tcs:
         with st.container(border=True):
             c1, c2, c3 = st.columns([6, 1, 1])
-            c1.markdown(f"`{tc.id}` v{tv[tc.id]} · **{tc.type.value}** · {tc.title} — {badge(d2, tc.id)}")
+            c1.markdown(f"`{tc.id}` v{tv[tc.id]} · **{tc.priority.value} / {tc.severity.value}** "
+                        f"· {tc.type.value} · {tc.title} — {badge(d2, tc.id)}")
+            c1.caption(f"Ưu tiên/tác động ({tc.triage_source}): {tc.triage_reason}")
             if tc.scenario_id:
                 c1.caption(f"Scenario: {tc.scenario_id}")
             if tc.review_required:
@@ -302,8 +346,17 @@ with tab_flow:
                 title = st.text_input("Tiêu đề", tc.title, key=f"t_{tc.id}")
                 steps = st.text_area("Các bước (mỗi dòng một bước)", "\n".join(s.action for s in tc.steps), key=f"s_{tc.id}")
                 expected = st.text_input("Kết quả mong đợi", tc.expected_result, key=f"e_{tc.id}")
+                p_options = list(TestPriority)
+                s_options = list(TestSeverity)
+                priority = st.selectbox("Priority", p_options, index=p_options.index(tc.priority),
+                                        format_func=lambda value: value.value, key=f"priority_{tc.id}_v{tv[tc.id]}")
+                severity = st.selectbox("Severity", s_options, index=s_options.index(tc.severity),
+                                        format_func=lambda value: value.value, key=f"severity_{tc.id}_v{tv[tc.id]}")
+                triage_reason = st.text_input("Lý do xếp hạng", tc.triage_reason,
+                                              key=f"triage_reason_{tc.id}_v{tv[tc.id]}")
                 if st.button("Lưu thành version mới", key=f"sv_{tc.id}"):
-                    if (new := edited_test_case(tc, title, steps, expected)) is not None:
+                    if (new := edited_test_case(tc, title, steps, expected,
+                                                priority, severity, triage_reason)) is not None:
                         store.save_test_cases(pid, [new])
                         log("edit_test_case", tc=tc.id)
                         st.rerun()
@@ -311,7 +364,7 @@ with tab_flow:
     # ③ sinh + chạy
     approved_tcs = [tc for tc in tcs if tc.id in approved_test_case_ids(tcs, d2, tv)]
     st.subheader(f"③ Sinh script và chạy — {len(approved_tcs)} test case đã duyệt")
-    st.caption("Khi bấm Chạy, Chromium mở cửa sổ trên máy đang chạy hệ thống và tự đóng sau khi test kết thúc.")
+    st.caption("Khi bấm Chạy, Chromium mở toàn màn hình trên máy đang chạy hệ thống và tự đóng sau khi test kết thúc.")
     scripts, runs = store.latest_scripts(pid), store.latest_executions(pid)
     for tc in approved_tcs:
         with st.container(border=True):
@@ -319,15 +372,20 @@ with tab_flow:
             status = f"{'✅' if run.status == 'passed' else '❌'} {run.status}" if run else "chưa chạy"
             d8 = store.decisions(pid, "AG-08")
             script_approved = bool(row and is_approved(d8, tc.id, row.version))
-            c1, c2, c3, c4 = st.columns([4, 1, 1, 1])
+            c1, c2, c3, c4, c5 = st.columns([4, 1, 1, 1, 1])
             review_state = "✅ script đã duyệt" if script_approved else "⏳ chờ duyệt script"
-            c1.markdown(f"`{tc.id}` {tc.title} · script: {f'v{row.version}' if row else '—'} · {review_state} · {status}")
+            c1.markdown(f"`{tc.id}` **{tc.priority.value} / {tc.severity.value}** · {tc.title} "
+                        f"· script: {f'v{row.version}' if row else '—'} · {review_state} · {status}")
             if c2.button("Sinh script", key=f"g_{tc.id}", use_container_width=True):
                 try:
                     with st.spinner("Snapshot → LLM → grounding..."):
                         saved = generate(tc)
                 except BrowserTaskError as exc:
                     show_browser_task_error(exc, tc.id)
+                    st.stop()
+                except Exception as exc:
+                    log("generation_failed", tc=tc.id, error_type=type(exc).__name__)
+                    st.error(llm_failure_message(exc))
                     st.stop()
                 if not saved:
                     st.error("Script was not saved: grounding still has unmatched locators. Edit and approve the test case before trying again.")
@@ -340,8 +398,25 @@ with tab_flow:
                 with st.spinner("Đang chạy..."):
                     execute(tc.id)
                 st.rerun()
+            can_capture = bool(row and script_approved and tc.type == TestType.POSITIVE and
+                               AUTH_FILE is not None and "AGENTIC_AUTH_STATE_OUT" in row.code)
+            if row and c5.button("Chạy & lưu phiên", key=f"auth_{tc.id}", use_container_width=True,
+                                 disabled=not can_capture,
+                                 help="Chạy từ browser sạch; chỉ lưu cookie/localStorage nếu script đạt."):
+                with st.spinner("Đang đăng nhập và lưu phiên..."):
+                    result = execute(tc.id, capture_auth=True)
+                if result.auth_state_saved:
+                    st.session_state.auth_notice = "Đã lưu phiên. Bật 'Dùng phiên đã lưu' cho các case trang được bảo vệ."
+                elif result.status == ExecStatus.PASSED:
+                    st.error("Test đạt nhưng không có cookie/localStorage để lưu. Website có thể dùng sessionStorage hoặc script cũ chưa hỗ trợ lưu phiên.")
+                    st.stop()
+                st.rerun()
+            if row and tc.type == TestType.POSITIVE and "AGENTIC_AUTH_STATE_OUT" not in row.code:
+                st.caption("Script cũ chưa hỗ trợ lưu phiên; hãy sinh lại script rồi duyệt phiên bản mới.")
             if row:
                 with st.expander("Plan, grounding và mã"):
+                    if is_manual_script(row.code):
+                        st.warning("Script đã sửa tay: plan/grounding cũ chỉ để tham khảo; self-healing tự động bị tắt.")
                     grounding = json.loads(row.grounding_json)
                     if grounding:
                         st.dataframe([{k: g[k] for k in ("action_index", "strategy", "value", "matched_count", "ok")}
@@ -365,6 +440,24 @@ with tab_flow:
                             log("edit_plan", tc=tc.id)
                             st.rerun()
                     st.code(visible_browser_code(row.code), language="python")
+                    st.caption("Sửa Python thủ công chỉ dành cho người duyệt tin cậy. Bản sửa không được grounding lại "
+                               "và phải duyệt script phiên bản mới trước khi chạy.")
+                    edited_code = st.text_area("Sửa mã Playwright Python", row.code, height=420,
+                                               key=f"code_{tc.id}_v{row.version}")
+                    if st.button("Lưu script sửa tay", key=f"save_code_{tc.id}_v{row.version}"):
+                        if edited_code.replace("\r\n", "\n").strip() == row.code.replace("\r\n", "\n").strip():
+                            st.info("Mã chưa thay đổi.")
+                        else:
+                            try:
+                                validated_code = validate_manual_script(edited_code)
+                            except ValueError as exc:
+                                st.error(str(exc))
+                            else:
+                                plan = PlaywrightPlan.model_validate_json(row.plan_json)
+                                store.save_script(pid, plan, GeneratedScript(test_case_id=tc.id,
+                                                                            code=validated_code))
+                                log("edit_script_manual", tc=tc.id, previous_version=row.version)
+                                st.rerun()
             if run:
                 # ExecutionAgent creates an isolated artifact directory per run.
                 # Read the persisted paths instead of guessing the legacy shared
@@ -378,9 +471,15 @@ with tab_flow:
                     st.caption(f"Trace: {traces[-1]}")
 
     # ④ sửa lỗi có ràng buộc
-    failed = [tc for tc in approved_tcs if tc.id in runs and runs[tc.id].status != "passed"]
+    manual_failed = [tc for tc in approved_tcs if tc.id in runs and runs[tc.id].status != "passed"
+                     and tc.id in scripts and is_manual_script(scripts[tc.id].code)]
+    failed = [tc for tc in approved_tcs if tc.id in runs and runs[tc.id].status != "passed"
+              and tc not in manual_failed]
+    if manual_failed:
+        st.info("Script sửa tay bị lỗi: hãy sửa trực tiếp mã hoặc sinh lại từ plan; không tự đề xuất self-healing.")
     decided = {d.artifact_id for g in ("AG-03", "AG-04", "AG-05", "REPAIR-LOW") for d in store.decisions(pid, g)}
-    pending = [(rid, p) for rid, p in store.repairs(pid) if f"repair-{rid}" not in decided]
+    pending = [(rid, p) for rid, p in store.repairs(pid) if f"repair-{rid}" not in decided
+               and p.test_case_id not in {tc.id for tc in manual_failed}]
     st.subheader(f"④ Sửa lỗi có ràng buộc — {len(failed)} test lỗi · {len(pending)} đề xuất chờ duyệt")
     for tc in failed:
         if not any(p.test_case_id == tc.id for _, p in pending) and st.button(f"Đề xuất sửa cho {tc.id}", key=f"r_{tc.id}"):

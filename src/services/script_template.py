@@ -12,6 +12,7 @@ _SKELETON = jinja2.Template(
     """\
 from playwright.sync_api import sync_playwright, expect
 from pathlib import Path
+import os
 
 _UPLOAD_ROOT = Path({{ upload_root }}).resolve()
 
@@ -27,14 +28,19 @@ expect.set_options(timeout=10_000)  # trang demo có phần tử chờ ~5s (dyna
 
 def run():
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False, args=["--disable-http2"])  # mở cửa sổ để người dùng theo dõi
-        context = browser.new_context()
+        browser = p.chromium.launch(headless=False, args=["--disable-http2", "--start-maximized", "--start-fullscreen"])
+        _auth_input = os.environ.get("AGENTIC_AUTH_STATE_IN")
+        context = (browser.new_context(storage_state=_auth_input, no_viewport=True)
+                   if _auth_input else browser.new_context(no_viewport=True))
         context.tracing.start(screenshots=True, snapshots=True, sources=True)
         page = context.new_page()
         page.set_default_timeout(10_000)  # thao tác (click/fill); điều hướng giữ 30s
         page.set_default_navigation_timeout(30_000)
         try:
             {{ body }}
+            _auth_output = os.environ.get("AGENTIC_AUTH_STATE_OUT")
+            if _auth_output:
+                context.storage_state(path=_auth_output)
         finally:
             page.screenshot(path={{ screenshot }})
             context.tracing.stop(path={{ trace }})

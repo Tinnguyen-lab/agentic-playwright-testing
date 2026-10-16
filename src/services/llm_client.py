@@ -10,7 +10,7 @@ import json
 import re
 from typing import Protocol, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -97,7 +97,24 @@ class OpenAILLMClient:
                 raise
             hint = "Chỉ trả JSON hợp lệ khớp schema sau:\n" + json.dumps(json_schema, ensure_ascii=False)
             content = self._call(f"{system_prompt}\n\n{hint}", user_prompt, {"type": "json_object"})
-        return schema.model_validate_json(_extract_json(content))
+        try:
+            return schema.model_validate_json(_extract_json(content))
+        except ValidationError as exc:
+            # Some compatible backends accept json_schema but still produce
+            # invalid field types or incomplete JSON. Ask once for a corrected
+            # response; never silently invent missing requirement/test data.
+            issues = [{"path": ".".join(map(str, error["loc"])), "type": error["type"]}
+                      for error in exc.errors()[:12]]
+            repair_prompt = (
+                f"{user_prompt}\n\nYour previous JSON did not validate against {schema.__name__}. "
+                "Return the complete corrected JSON object only. Do not omit documented facts, "
+                "and do not invent facts that are absent from the source.\n"
+                f"Validation errors: {json.dumps(issues, ensure_ascii=False)}\n"
+                f"Previous JSON: {_extract_json(content)[:12000]}"
+            )
+            hint = "The JSON must match this schema exactly:\n" + json.dumps(json_schema, ensure_ascii=False)
+            corrected = self._call(f"{system_prompt}\n\n{hint}", repair_prompt, {"type": "json_object"})
+            return schema.model_validate_json(_extract_json(corrected))
 
     def _call(self, system_prompt: str, user_prompt: str, response_format: dict) -> str:
         resp = self._client.chat.completions.create(

@@ -13,6 +13,7 @@ from src.services.boundary_analysis import derive_boundary_cases
 from src.services.llm_client import LLMClient
 from src.services.scenario_decomposition import decompose
 from src.services.test_design_policy import TEST_DESIGN_RUNTIME_POLICY
+from src.services.test_triage import evaluate_test_case
 
 MIN_EXPANDED_CASES = 6
 
@@ -36,6 +37,10 @@ QUY TẮC BẮT BUỘC:
   expected_result rỗng, review_required=true và review_note nói chính xác điều cần người duyệt xác nhận.
   Đó là ứng viên để thảo luận, không phải bằng chứng yêu cầu hay case đã được xác minh.
 - KHÔNG gán ID (hệ thống tự gán).
+- Với mỗi case, đề xuất priority P0/P1/P2/P3 (mức ưu tiên xử lý) và severity
+  critical/high/medium/low (tác động NẾU hành vi sai), kèm triage_reason ngắn.
+  P0 chỉ dành cho rủi ro mất dữ liệu, truy cập trái phép hoặc thiệt hại tài chính
+  có căn cứ; không đồng nhất mức ưu tiên với kết quả chạy hay một lỗi đã xác nhận.
 
 CHÍNH SÁCH RUNTIME TỪ SKILL:
 {TEST_DESIGN_RUNTIME_POLICY}
@@ -89,7 +94,8 @@ class TestDesignAgent:
         links = []
         for index, tc in enumerate(all_cases, start=1):
             tc_id = f"{requirement.id}-TC-{index:02d}"
-            cases.append(tc.model_copy(update={"id": tc_id, "requirement_id": requirement.id}))
+            identified = tc.model_copy(update={"id": tc_id, "requirement_id": requirement.id})
+            cases.append(evaluate_test_case(identified))
             links.append(TraceLink(from_id=requirement.id, to_id=tc_id, link_type="requirement->test_case"))
 
         return TestDesignResult(
@@ -274,7 +280,9 @@ class TestDesignAgent:
                 "NHƯNG phải đặt review_required=true, review_note nêu rõ giả định cần xác nhận, và không được mô tả "
                 "giả định đó như requirement đã được chứng minh.\n"
                 "- Với ứng viên chưa có oracle: để expected_result rỗng. Case có đầy đủ căn cứ phải đặt "
-                "review_required=false. Không tạo case trùng lặp."
+                "review_required=false. Không tạo case trùng lặp.\n"
+                "- Đánh giá priority và severity riêng cho mỗi case dựa trên tác động/rủi ro, "
+                "ghi rõ triage_reason. Đây là đề xuất để người duyệt kiểm tra, không phải lỗi đã xác nhận."
             )
         return prompt
 

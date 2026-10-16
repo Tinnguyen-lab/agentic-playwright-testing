@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from src.models.approval import ApprovalDecision, is_approved
 from src.models.playwright_artifacts import ActionType, PlaywrightPlan
-from src.models.test_case import TestCase, TestStep
+from src.models.test_case import TestCase, TestPriority, TestSeverity, TestStep
 
 _EXPECT = {
     ActionType.EXPECT_URL, ActionType.EXPECT_VISIBLE, ActionType.EXPECT_TEXT,
@@ -42,8 +42,19 @@ def repair_gate(old: PlaywrightPlan, new: PlaywrightPlan, changed_kinds: list[st
     return "REPAIR-LOW"
 
 
-def edited_test_case(tc: TestCase, title: str, steps_text: str, expected: str) -> TestCase | None:
+def edited_test_case(tc: TestCase, title: str, steps_text: str, expected: str,
+                     priority: TestPriority | None = None, severity: TestSeverity | None = None,
+                     triage_reason: str | None = None) -> TestCase | None:
     """Test case sau khi người dùng sửa trên UI; None nếu không đổi gì (không tạo version mới)."""
     steps = [TestStep(action=line.strip()) for line in steps_text.splitlines() if line.strip()]
-    new = tc.model_copy(update={"title": title.strip() or tc.title, "steps": steps, "expected_result": expected.strip()})
+    chosen_priority = priority or tc.priority
+    chosen_severity = severity or tc.severity
+    chosen_reason = tc.triage_reason if triage_reason is None else triage_reason.strip()
+    triage_changed = (chosen_priority != tc.priority or chosen_severity != tc.severity or
+                      chosen_reason != tc.triage_reason)
+    new = tc.model_copy(update={
+        "title": title.strip() or tc.title, "steps": steps, "expected_result": expected.strip(),
+        "priority": chosen_priority, "severity": chosen_severity, "triage_reason": chosen_reason,
+        "triage_source": "human" if triage_changed else tc.triage_source,
+    })
     return None if new == tc else new

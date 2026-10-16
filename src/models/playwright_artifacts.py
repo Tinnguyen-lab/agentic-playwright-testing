@@ -102,4 +102,5 @@ class ExecutionResult(BaseModel):
     stdout: str = ""
     stderr: str = ""
     artifacts: list[str] = Field(default_factory=list)
+    auth_state_saved: bool = False
     executed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

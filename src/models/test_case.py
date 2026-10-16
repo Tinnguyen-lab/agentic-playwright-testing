@@ -21,6 +21,20 @@ class TestType(str, Enum):
     ALTERNATIVE_FLOW = "alternative_flow"
 
 
+class TestPriority(str, Enum):
+    P0 = "P0"
+    P1 = "P1"
+    P2 = "P2"
+    P3 = "P3"
+
+
+class TestSeverity(str, Enum):
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
 class TestStep(BaseModel):
     action: str
     expected: str = ""
@@ -38,6 +52,10 @@ class TestCase(BaseModel):
     scenario_id: str = ""
     review_required: bool = False
     review_note: str = ""
+    priority: TestPriority | None = None
+    severity: TestSeverity | None = None
+    triage_reason: str = ""
+    triage_source: str = ""  # llm / rule / human
 
 
 class TestCaseDraft(BaseModel):

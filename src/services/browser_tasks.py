@@ -35,12 +35,13 @@ def snapshot(page, chars: int = SNAPSHOT_CHARS) -> str:
         return ""
 
 
-def probe(browser, plan: PlaywrightPlan):
+def probe(browser, plan: PlaywrightPlan, storage_state: str | None = None):
     """Chạy lại plan trên trang thật tới bước hỏng đầu tiên. Trả (page, chỉ số|None, ghi chú, snapshot).
 
     Page được để mở (ở đúng trạng thái lúc hỏng) để self-healing dò DOM; người gọi đóng `page.context`.
     """
-    page = browser.new_context().new_page()
+    context = browser.new_context(storage_state=storage_state) if storage_state else browser.new_context()
+    page = context.new_page()
     idx, note = None, "replay không gặp lỗi"
     for i, a in enumerate(plan.actions):
         try:
@@ -119,7 +120,8 @@ def try_heal(page, plan: PlaywrightPlan, idx) -> dict[int, PlaywrightAction] | N
     return {idx: healed} if healed is not None else None
 
 
-def heal_all(browser, plan: PlaywrightPlan, max_rounds: int = 6):
+def heal_all(browser, plan: PlaywrightPlan, max_rounds: int = 6,
+             storage_state: str | None = None):
     """Chữa theo lô: dò bước hỏng → chữa → dò lại trên plan đã chữa, tới khi hết lỗi chữa được.
 
     Trả (các action đã chữa theo chỉ số, ghi chú + snapshot tại bước hỏng cuối cùng). Một mutation đổi nhiều locator
@@ -129,7 +131,7 @@ def heal_all(browser, plan: PlaywrightPlan, max_rounds: int = 6):
     current = plan
     note, snap = "", ""
     for _ in range(max_rounds):
-        page, idx, note, snap = probe(browser, current)
+        page, idx, note, snap = probe(browser, current, storage_state=storage_state)
         fix = try_heal(page, current, idx)
         page.context.close()
         if not fix:
@@ -144,19 +146,20 @@ def _task(name: str, payload: dict) -> dict:
     with sync_playwright() as p:
         browser = p.chromium.launch(args=LAUNCH_ARGS)
         try:
+            state = payload.get("storage_state")
             if name == "snapshot":
-                page = browser.new_page()
+                page = browser.new_page(storage_state=state) if state else browser.new_page()
                 page.goto(payload["url"], wait_until="domcontentloaded", timeout=30000)
                 with contextlib.suppress(Exception):
                     page.wait_for_load_state("networkidle", timeout=8000)
                 return {"snapshot": snapshot(page, payload.get("chars", 6000))}
             plan = PlaywrightPlan.model_validate(payload["plan"])
             if name == "ground":
-                page = browser.new_page()
+                page = browser.new_page(storage_state=state) if state else browser.new_page()
                 records = ground_flow(page, plan.actions, snapshot_chars=payload.get("chars", SNAPSHOT_CHARS))
                 return {"records": [r.model_dump() for r in records]}
             if name == "probe_heal":
-                healed, evidence = heal_all(browser, plan)
+                healed, evidence = heal_all(browser, plan, storage_state=state)
                 return {"evidence": evidence, "healed": {str(k): v.model_dump(mode="json") for k, v in healed.items()}}
             raise ValueError(f"task không hỗ trợ: {name}")
         finally:
