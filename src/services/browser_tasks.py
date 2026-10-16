@@ -15,7 +15,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-from src.agents.playwright_generation_agent import build_locator, ground_flow, live_count_fn
+from src.agents.playwright_generation_agent import _grounding_ok, build_locator, ground_flow, live_count_fn
 from src.models.playwright_artifacts import ActionType, PlaywrightAction, PlaywrightPlan
 from src.services.locator_healing import heal_action, propose_candidates
 
@@ -52,14 +52,48 @@ def probe(browser, plan: PlaywrightPlan):
             with contextlib.suppress(Exception):
                 loc.first.wait_for(state="attached", timeout=2000)
             n = loc.count()
-            if n != 1:
+            if not _grounding_ok(a, n):
                 idx, note = i, f"locator {a.strategy.value}:{a.value}[{a.role_name}] khớp {n} phần tử"
                 break
+            target = None
+            if a.type == ActionType.DRAG_TO:
+                if a.target_strategy is None:
+                    idx, note = i, "drag_to missing target locator"
+                    break
+                target = build_locator(page, a.target_strategy, a.target_value, a.target_role_name, a.target_nth)
+                if target.count() != 1:
+                    idx, note = i, f"drag target matched {target.count()} elements"
+                    break
             if a.type == ActionType.FILL:
                 loc.fill(a.arg)
             elif a.type == ActionType.CLICK:
                 loc.click()
                 page.wait_for_load_state()
+            elif a.type == ActionType.SELECT_OPTION:
+                loc.select_option(a.arg)
+            elif a.type == ActionType.CHECK:
+                loc.check()
+            elif a.type == ActionType.UNCHECK:
+                loc.uncheck()
+            elif a.type == ActionType.PRESS:
+                loc.press(a.arg)
+            elif a.type == ActionType.HOVER:
+                loc.hover()
+            elif a.type == ActionType.DBLCLICK:
+                loc.dblclick()
+            elif a.type == ActionType.UPLOAD_FILE:
+                loc.set_input_files(a.arg)
+            elif a.type == ActionType.DRAG_TO:
+                loc.drag_to(target)
+            elif a.type == ActionType.EXPECT_VALUE and loc.input_value() != a.arg:
+                idx, note = i, f"value actual: {loc.input_value()!r}"
+                break
+            elif a.type == ActionType.EXPECT_CHECKED and not loc.is_checked():
+                idx, note = i, "checkbox/radio is not checked"
+                break
+            elif a.type == ActionType.EXPECT_ENABLED and not loc.is_enabled():
+                idx, note = i, "element is disabled"
+                break
             elif a.type == ActionType.EXPECT_TEXT and a.arg not in loc.inner_text():
                 idx, note = i, f"văn bản thực tế: {loc.inner_text()!r}"
                 break

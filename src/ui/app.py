@@ -67,7 +67,7 @@ def _store() -> Store:
 def _client(mock_response):
     if BACKEND.startswith("mock"):
         return resolve_client(None, True, mock_response)
-    return resolve_client(None if BACKEND.startswith("local") else "cloud", False, mock_response)
+    return resolve_client(None, False, mock_response)
 
 
 def log(event: str, **payload) -> None:
@@ -164,7 +164,11 @@ with st.sidebar:
     ACTOR = st.text_input("Người dùng / mã người tham gia", value="reviewer")
     PROJECT = st.text_input("Dự án", value="ShopLab")
     BASE_URL = st.text_input("URL ứng dụng đích", value="http://127.0.0.1:5100/login")
-    BACKEND = st.selectbox("LLM backend", ["mock (offline)", "local (.env)", "cloud (.env.cloud)"])
+    BACKEND = st.selectbox(
+        "LLM backend",
+        ["DeepSeek (.env)", "mock (offline)"],
+        help="DeepSeek là backend LLM duy nhất dùng khóa API. Mock hoạt động hoàn toàn offline.",
+    )
     DESIGN_MODE = "Expanded — cần duyệt"
     st.caption("Thiết kế test: Expanded — các case thiếu oracle phải được người duyệt xác nhận.")
     if BACKEND.startswith("mock"):

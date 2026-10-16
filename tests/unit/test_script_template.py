@@ -46,6 +46,6 @@ def test_llm_strings_are_escaped_not_injected():
     ])
     code = render_script(plan)
     tree = ast.parse(code)  # trước đây: SyntaxError / chèn được mã
-    assert [type(n).__name__ for n in ast.walk(tree) if isinstance(n, (ast.Import, ast.ImportFrom))] == ["ImportFrom"]
+    assert [type(n).__name__ for n in ast.walk(tree) if isinstance(n, (ast.Import, ast.ImportFrom))] == ["ImportFrom", "ImportFrom"]
     assert 'get_by_text("\\"Welcome UserName!\\"")' in code
     assert 'page.get_by_role("button").click()' in code  # role_name rỗng -> không có name=, khớp grounding

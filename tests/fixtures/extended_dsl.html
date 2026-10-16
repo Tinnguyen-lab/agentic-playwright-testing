@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Extended DSL fixture</title>
+  <style>
+    [data-testid="hover-zone"], [data-testid="drag-source"], [data-testid="drag-target"] { padding: 16px; margin: 8px; border: 1px solid #555; }
+  </style>
+</head>
+<body>
+  <label>Country <select data-testid="country"><option value="vn">Vietnam</option><option value="us">United States</option></select></label>
+  <p data-testid="country-status">Selected: none</p>
+
+  <div data-testid="hover-zone">Hover here</div>
+  <p data-testid="hover-status">Not hovered</p>
+
+  <label>Keyboard <input data-testid="keyboard" type="text"></label>
+  <p data-testid="key-status">Not submitted</p>
+
+  <button data-testid="double-click">Double click</button>
+  <p data-testid="double-status">Not double clicked</p>
+
+  <label><input data-testid="terms" type="checkbox"> Accept terms</label>
+  <button data-testid="enabled-button">Enabled button</button>
+
+  <label>Upload <input data-testid="upload" type="file"></label>
+  <p data-testid="upload-status">No file</p>
+
+  <div data-testid="drag-source" draggable="true">Drag source</div>
+  <div data-testid="drag-target">Drop target</div>
+
+  <ul data-testid="items"><li>One</li><li>Two</li></ul>
+  <script>
+    const by = (id) => document.querySelector(`[data-testid="${id}"]`);
+    by('country').addEventListener('change', (e) => by('country-status').textContent = `Selected: ${e.target.selectedOptions[0].text}`);
+    by('hover-zone').addEventListener('mouseenter', () => by('hover-status').textContent = 'Hovered');
+    by('keyboard').addEventListener('keydown', (e) => { if (e.key === 'Enter') by('key-status').textContent = 'Submitted with Enter'; });
+    by('double-click').addEventListener('dblclick', () => by('double-status').textContent = 'Double clicked');
+    by('upload').addEventListener('change', (e) => by('upload-status').textContent = `Uploaded: ${e.target.files[0].name}`);
+    by('drag-source').addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', 'drag-source'));
+    by('drag-target').addEventListener('dragover', (e) => e.preventDefault());
+    by('drag-target').addEventListener('drop', (e) => { e.preventDefault(); by('drag-target').textContent = `Dropped: ${e.dataTransfer.getData('text/plain')}`; });
+  </script>
+</body>
+</html>

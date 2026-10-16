@@ -1,0 +1,35 @@
+{
+  "source": "docs/inputs/orangehrm_observed_requirements_2026-10-14.md",
+  "selection_note": "Only the requirement-backed, positive login test is selected for live execution. Other generated cases remain review_required or depend on an authenticated-session fixture not yet represented by the execution CLI.",
+  "test_cases": [
+    {
+      "id": "REQ-001-TC-01",
+      "requirement_id": "REQ-001",
+      "title": "Public-demo login opens Dashboard",
+      "type": "positive",
+      "preconditions": [
+        "The public OrangeHRM demo login page is open.",
+        "The page visibly publishes demo Username Admin and Password admin123."
+      ],
+      "steps": [
+        {
+          "action": "Enter Admin in the Username textbox.",
+          "expected": "The Username textbox contains Admin."
+        },
+        {
+          "action": "Enter admin123 in the Password textbox.",
+          "expected": "The Password textbox contains the entered value."
+        },
+        {
+          "action": "Select Login.",
+          "expected": "Dashboard opens at /web/index.php/dashboard/index and the Dashboard heading is visible."
+        }
+      ],
+      "expected_result": "Dashboard opens at https://opensource-demo.orangehrmlive.com/web/index.php/dashboard/index and a Dashboard heading is visible.",
+      "source_excerpt": "ORH-01 observed public-demo authentication.",
+      "scenario_id": "SC-01",
+      "review_required": false,
+      "review_note": ""
+    }
+  ]
+}

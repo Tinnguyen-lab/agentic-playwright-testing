@@ -8,7 +8,11 @@ from src.models.approval import ApprovalDecision, is_approved
 from src.models.playwright_artifacts import ActionType, PlaywrightPlan
 from src.models.test_case import TestCase, TestStep
 
-_EXPECT = {ActionType.EXPECT_URL, ActionType.EXPECT_VISIBLE, ActionType.EXPECT_TEXT}
+_EXPECT = {
+    ActionType.EXPECT_URL, ActionType.EXPECT_VISIBLE, ActionType.EXPECT_TEXT,
+    ActionType.EXPECT_VALUE, ActionType.EXPECT_CHECKED, ActionType.EXPECT_ENABLED,
+    ActionType.EXPECT_COUNT,
+}
 
 
 def approved_requirement_ids(requirements, decisions: list[ApprovalDecision],
