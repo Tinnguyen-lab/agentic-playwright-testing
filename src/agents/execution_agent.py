@@ -4,6 +4,7 @@ Chạy script Playwright trong cấu hình khóa, thu evidence, phân loại tr�
 """
 from __future__ import annotations
 
+import ast
 import subprocess
 import sys
 import re
@@ -12,6 +13,47 @@ from pathlib import Path
 from uuid import uuid4
 
 from src.models.playwright_artifacts import ExecStatus, ExecutionResult, GeneratedScript
+
+
+def visible_browser_code(code: str) -> str:
+    """Bật cửa sổ browser trong cả script đã lưu trước khi mẫu sinh mã được cập nhật.
+
+    Chỉ thay lời gọi Playwright browser.launch; các bước và assertion được giữ nguyên.
+    Tệp generated_test.py trong thư mục bằng chứng là đúng mã đã thực thi.
+    """
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return code  # Để tiến trình con ghi lỗi cú pháp vào stderr như trước.
+    source = code.encode("utf-8")
+    lines = code.splitlines(keepends=True)
+    line_starts = [0]
+    for line in lines:
+        line_starts.append(line_starts[-1] + len(line.encode("utf-8")))
+
+    replacements: list[tuple[int, int, bytes]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        browser = node.func.value
+        if node.func.attr != "launch" or not isinstance(browser, ast.Attribute):
+            continue
+        if browser.attr not in {"chromium", "firefox", "webkit"}:
+            continue
+        headless = next((kw for kw in node.keywords if kw.arg == "headless"), None)
+        if headless is not None and isinstance(headless.value, ast.Constant) and headless.value.value is False:
+            continue
+        if headless is None:
+            node.keywords.insert(0, ast.keyword(arg="headless", value=ast.Constant(value=False)))
+        else:
+            headless.value = ast.Constant(value=False)
+        start = line_starts[node.lineno - 1] + node.col_offset
+        end = line_starts[node.end_lineno - 1] + node.end_col_offset
+        replacements.append((start, end, ast.unparse(node).encode("utf-8")))
+
+    for start, end, replacement in sorted(replacements, reverse=True):
+        source = source[:start] + replacement + source[end:]
+    return source.decode("utf-8")
 
 
 def classify_status(exit_code: int, stdout: str, stderr: str) -> ExecStatus:
@@ -30,7 +72,7 @@ class ExecutionAgent:
         workdir = root / safe_id / run_id
         workdir.mkdir(parents=True, exist_ok=False)
         script_path = workdir / "generated_test.py"
-        script_path.write_text(script.code, encoding="utf-8")
+        script_path.write_text(visible_browser_code(script.code), encoding="utf-8")
 
         try:
             proc = subprocess.run(

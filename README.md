@@ -32,6 +32,8 @@ Hai file này không được commit. DB mặc định là SQLite `artifacts/app
 | App đích ShopLab | `python apps/shoplab/app.py --variant v0 --port 5100` |
 | Pipeline demo trên SauceDemo | `python run_full_pipeline.py` |
 
+Ở bước **③ Sinh script và chạy**, nút **Chạy** mở cửa sổ Chromium trên máy chạy Streamlit; cửa sổ tự đóng khi test kết thúc. Script đã lưu từ phiên bản cũ cũng được chạy ở chế độ hiển thị.
+
 ## Tái lập thực nghiệm
 
 | RQ | Lệnh | Kết quả |

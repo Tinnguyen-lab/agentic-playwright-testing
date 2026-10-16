@@ -22,7 +22,7 @@ if str(_ROOT) not in sys.path:
 import streamlit as st
 
 from run_requirement_agent import default_mock_extraction
-from src.agents.execution_agent import ExecutionAgent
+from src.agents.execution_agent import ExecutionAgent, visible_browser_code
 from src.agents.playwright_generation_agent import PlaywrightGenerationAgent, grounding_feedback
 from src.agents.repair_agent import RepairAgent
 from src.agents.requirement_agent import RequirementAnalysisAgent
@@ -298,6 +298,7 @@ with tab_flow:
     # ③ sinh + chạy
     approved_tcs = [tc for tc in tcs if tc.id in approved_test_case_ids(tcs, d2, tv)]
     st.subheader(f"③ Sinh script và chạy — {len(approved_tcs)} test case đã duyệt")
+    st.caption("Khi bấm Chạy, Chromium mở cửa sổ trên máy đang chạy hệ thống và tự đóng sau khi test kết thúc.")
     scripts, runs = store.latest_scripts(pid), store.latest_executions(pid)
     for tc in approved_tcs:
         with st.container(border=True):
@@ -341,7 +342,7 @@ with tab_flow:
                                 st.stop()
                             log("edit_plan", tc=tc.id)
                             st.rerun()
-                    st.code(row.code, language="python")
+                    st.code(visible_browser_code(row.code), language="python")
             if run:
                 # ExecutionAgent creates an isolated artifact directory per run.
                 # Read the persisted paths instead of guessing the legacy shared

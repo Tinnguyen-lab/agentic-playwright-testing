@@ -1,5 +1,7 @@
 """Test phân loại trạng thái execution (thuần, offline)."""
-from src.agents.execution_agent import ExecutionAgent, classify_status
+import subprocess
+
+from src.agents.execution_agent import ExecutionAgent, classify_status, visible_browser_code
 from src.models.playwright_artifacts import ExecStatus, GeneratedScript
 
 
@@ -17,6 +19,21 @@ def test_classify_failed_on_timeout():
 
 def test_classify_error_otherwise():
     assert classify_status(1, "", "ModuleNotFoundError: No module named 'x'") == ExecStatus.ERROR
+
+
+def test_execution_makes_saved_playwright_script_visible(tmp_path, monkeypatch):
+    legacy = 'browser = p.chromium.launch(args=["--disable-http2"])\nprint("PASSED")\n'
+    updated = visible_browser_code(legacy)
+    assert 'p.chromium.launch(headless=False, args=[' in updated
+    assert visible_browser_code(updated) == updated
+    assert 'headless=False' in visible_browser_code('browser = p.chromium.launch(headless=True)')
+
+    monkeypatch.setattr("src.agents.execution_agent.subprocess.run",
+                        lambda *args, **kwargs: subprocess.CompletedProcess(args[0], 0, "PASSED\n", ""))
+    result = ExecutionAgent().run(GeneratedScript(test_case_id="old", code=legacy), tmp_path)
+    assert result.status == ExecStatus.PASSED
+    executed = (tmp_path / "old" / result.run_id / "generated_test.py").read_text(encoding="utf-8")
+    assert executed == updated
 
 
 def test_execution_keeps_isolated_evidence_for_each_run(tmp_path):

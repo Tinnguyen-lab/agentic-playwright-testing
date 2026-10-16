@@ -25,6 +25,7 @@ def test_render_login_script():
     assert 'page.get_by_placeholder("Username").fill("standard_user")' in code
     assert 'page.get_by_role("button", name="Login").click()' in code
     assert 'expect(page).to_have_url("https://www.saucedemo.com/inventory.html")' in code
+    assert "p.chromium.launch(headless=False" in code
     assert "sync_playwright" in code and 'page.screenshot(path="shot.png")' in code
 
 

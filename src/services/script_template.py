@@ -27,7 +27,7 @@ expect.set_options(timeout=10_000)  # trang demo có phần tử chờ ~5s (dyna
 
 def run():
     with sync_playwright() as p:
-        browser = p.chromium.launch(args=["--disable-http2"])  # HTTP/2 tới heroku bị treo ở một số mạng
+        browser = p.chromium.launch(headless=False, args=["--disable-http2"])  # mở cửa sổ để người dùng theo dõi
         context = browser.new_context()
         context.tracing.start(screenshots=True, snapshots=True, sources=True)
         page = context.new_page()
